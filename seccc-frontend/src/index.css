@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* Utiliser @theme permet à Tailwind de créer bg-primary, text-secondary, etc. */
+@theme {
+  --color-primary: #d32f2f;
+  --color-secondary: #1a237e;
+  --color-cta-plumbing: ##ffffff;
+}
+
+body {
+  background-color: #f8fafc;
+}
