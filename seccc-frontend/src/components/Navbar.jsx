@@ -6,8 +6,8 @@ const Navbar = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    /* MODIFICATION ICI : Ajout de 'fixed top-0 left-0 w-full' */
-    <nav className="top-0 left-0 w-full bg-white shadow-md border-b-4 border-gray-100 z-50 print:hidden">
+    /* CORRECTION ICI : Activation complète de la fixité sur l'écran */
+    <nav className="fixed top-0 left-0 w-full bg-white shadow-md border-b-4 border-gray-100 z-50 print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-24">
           
@@ -38,12 +38,15 @@ const Navbar = ({ user }) => {
               À PROPOS
             </Link>
 
+            {/* ⚡ DEUX CHOIX D'ACCÈS : Survol pour la liste / Clic pour la page globale */}
             <div 
               className="relative group h-24 flex items-center"
               onMouseEnter={() => setIsOpen(true)}
               onMouseLeave={() => setIsOpen(false)}
             >
-              <button
+              {/* Le <button> est remplacé par un <Link> pour activer le clic direct vers /services */}
+              <Link
+                to="/services"
                 className={`flex items-center gap-2 font-bold text-sm tracking-wider transition-colors h-full px-4 ${
                   isOpen ? "bg-secondary text-white" : "text-secondary hover:text-primary"
                 }`}
@@ -63,8 +66,9 @@ const Navbar = ({ user }) => {
                     d="M19 9l-7 7-7-7"
                   ></path>
                 </svg>
-              </button>
+              </Link>
 
+              {/* Menu déroulant qui sort au survol */}
               {isOpen && (
                 <div className="absolute top-24 left-0 w-64 bg-white shadow-xl border-t-4 border-primary animate-in fade-in slide-in-from-top-2 duration-200">
                   <Link
@@ -90,7 +94,7 @@ const Navbar = ({ user }) => {
             </div>
 
             <Link
-              to="/news"
+              to="/realisations"
               className="text-secondary hover:text-primary font-bold text-sm tracking-wider transition-colors"
             >
               NOS REALISATIONS

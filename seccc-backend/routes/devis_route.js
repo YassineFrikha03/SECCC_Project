@@ -8,19 +8,41 @@ const nodemailer = require('nodemailer');
 // On force express à lire le fichier .env
 require('dotenv').config();
 
+// ==========================================
 // 1. Route POST : Créer un nouveau devis (Côté Client)
+// ==========================================
 router.post('/', async (req, res) => {
     try {
+        console.log("📥 Données reçues depuis React :", req.body);
+
+        // Étape 1 : Sauvegarde dans MongoDB
         const nouveauDevis = new Devis(req.body);
         const devisEnregistre = await nouveauDevis.save();
-        await envoyerEmailConfirmation(devisEnregistre);
-        res.status(201).json({ message: "Devis créé avec succès", devis: devisEnregistre });
+        
+        console.log("✅ Devis sauvegardé avec succès dans la base de données !");
+
+        // Étape 2 : Envoi de l'email de confirmation (Isolé dans un try/catch)
+        try {
+            await envoyerEmailConfirmation(devisEnregistre);
+            console.log("📧 Email de confirmation envoyé au client !");
+        } catch (emailError) {
+            console.error("⚠️ Le devis est enregistré, mais l'email a échoué :", emailError.message);
+            // On ne bloque pas la réponse à React si seul l'email plante
+        }
+
+        // On répond un succès à React (201)
+        res.status(201).json({ message: "Devis créé avec succès !", devis: devisEnregistre });
+
     } catch (error) {
+        // C'est ICI que s'affiche la vraie erreur Mongoose si la donnée est refusée
+        console.error("❌ ERREUR DE BASE DE DONNÉES :", error.message);
         res.status(400).json({ message: "Erreur lors de la création du devis", erreur: error.message });
     }
 });
 
+// ==========================================
 // 2. Route GET : Récupérer TOUS les devis
+// ==========================================
 router.get('/', async (req, res) => {
     try {
         const tousLesDevis = await Devis.find().sort({ createdAt: -1 });
@@ -30,7 +52,9 @@ router.get('/', async (req, res) => {
     }
 });
 
+// ==========================================
 // 3. Route PUT : Mettre à jour un devis
+// ==========================================
 router.put('/:id', async (req, res) => {
     try {
         const devisMisAJour = await Devis.findByIdAndUpdate(
@@ -47,7 +71,9 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// ==========================================
 // 4. Route DELETE : Supprimer un devis définitivement
+// ==========================================
 router.delete('/:id', async (req, res) => {
     try {
         const devisSupprime = await Devis.findByIdAndDelete(req.params.id);
@@ -60,7 +86,9 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// ==========================================
 // 5. Route GET : Recuperer un devis par nom
+// ==========================================
 router.get('/nom/:nomClient', async (req, res) => {
     try {
         const nomRecherche = req.params.nomClient;
@@ -74,7 +102,9 @@ router.get('/nom/:nomClient', async (req, res) => {
     }
 });
 
+// ==========================================
 // 6. Route DELETE : Supprimer un devis par nom
+// ==========================================
 router.delete('/nom/:nomClient', async (req, res) => {
     try {
         const nomRecherche = req.params.nomClient;
@@ -88,7 +118,7 @@ router.delete('/nom/:nomClient', async (req, res) => {
     }
 });
 
-// Configuration de Multer
+// Configuration de Multer pour le PDF
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ==========================================
@@ -120,7 +150,7 @@ router.post('/:id/send-pdf', upload.single('pdf'), async (req, res) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: devis.email,
-      subject: `Votre devis SECCC - Projet : ${devis.typeBien}`,
+      subject: `Votre devis SECCC - Projet : ${devis.typeBien || devis.servicesChoisis}`,
       text: `Bonjour ${devis.nom},\n\nSuite à votre demande, veuillez trouver ci-joint votre devis en format PDF.\n\nRestant à votre disposition pour toute question,\n\nCordialement,\nL'équipe SECCC`,
       attachments: [
         {

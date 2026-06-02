@@ -1,189 +1,234 @@
-import { useState } from "react";
-import api from "../services/api";
+import React, { useState } from 'react';
+import api from '../services/api.js';
 
 const FormulaireDevis = () => {
   const [etape, setEtape] = useState(1);
   const [formData, setFormData] = useState({
-    typeClient: "",
-    typeBien: "",
-    nom: "",
-    email: "",
-    telephone: "",
-    adresse: "",
+    typeClient: '',      
+    servicesChoisis: [], 
+    nom: '',
+    telephone: '',
+    email: '',
+    description: ''
   });
-  const [succes, setSucces] = useState(false);
+  const [envoiEnCours, setEnvoiEnCours] = useState(false);
 
-  const handleInput = (e) => {
+  const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const soumettreFormulaire = async (e) => {
-    e.preventDefault();
-    try {
-      await api.post("/devis", formData);
-      setSucces(true);
-    } catch (erreur) {
-      alert("Erreur lors de l'envoi du devis.");
+  const handleSelectUnique = (champ, valeur) => {
+    setFormData({ ...formData, [champ]: valeur });
+  };
+
+  const handleToggleService = (service) => {
+    const { servicesChoisis } = formData;
+    if (servicesChoisis.includes(service)) {
+      setFormData({
+        ...formData,
+        servicesChoisis: servicesChoisis.filter(s => s !== service)
+      });
+    } else {
+      setFormData({
+        ...formData,
+        servicesChoisis: [...servicesChoisis, service]
+      });
     }
   };
 
-  if (succes) {
-    return (
-      <div className="max-w-2xl mx-auto mt-10 bg-white p-8 rounded-lg shadow-md text-center border-t-4 border-green-500">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">
-          Demande envoyée avec succès !
-        </h2>
-        <p className="text-gray-600">
-          Notre équipe SECCC va étudier votre projet et vous contacter très
-          prochainement.
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-6 px-6 py-2 bg-secondary text-white rounded hover:bg-opacity-90"
-        >
-          Retour à l'accueil
-        </button>
-      </div>
-    );
-  }
+  const etapeSuivante = () => {
+    if (etape < 3) setEtape(etape + 1);
+  };
+
+  const etapePrecedente = () => {
+    if (etape > 1) setEtape(etape - 1);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (formData.servicesChoisis.length === 0) {
+      alert('Veuillez sélectionner au moins un service avant d’envoyer votre demande.');
+      setEtape(2);
+      return;
+    }
+
+    setEnvoiEnCours(true);
+
+    try {
+      // ⚡ On envoie formData PUREMENT tel quel, en parfaite harmonie avec le nouveau Backend
+      const response = await api.post('/devis', formData);
+      const message = response?.data?.message || `Votre demande de devis pour [${formData.servicesChoisis.join(', ')}] a été transmise avec succès !`;
+      
+      alert(message);
+      
+      setFormData({
+        typeClient: '',
+        servicesChoisis: [],
+        nom: '',
+        telephone: '',
+        email: '',
+        description: ''
+      });
+      setEtape(1);
+    } catch (error) {
+      console.error('Erreur lors de l’envoi du devis :', error);
+      alert("Erreur 400 : Regardez le terminal de votre backend (VS Code) pour voir le texte rouge exact !");
+    } finally {
+      setEnvoiEnCours(false);
+    }
+  };
 
   return (
-    <div className="max-w-3xl mx-auto mt-10 bg-white shadow-xl rounded-xl overflow-hidden">
-      <div className="bg-secondary p-6 text-white text-center">
-        <h2 className="text-3xl font-bold">Discutons de votre projet</h2>
-        <p className="mt-2 text-sm opacity-80">Étape {etape} sur 3</p>
-      </div>
+    <div className="min-h-screen bg-slate-50 pt-28 pb-16 font-sans">
+      <div className="max-w-3xl mx-auto px-4">
+        
+        <div className="text-center mb-8">
+          <span className="text-red-500 text-xs font-bold uppercase tracking-widest block mb-1">Devis Multicritères Gratuit</span>
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 uppercase tracking-tight">
+            Parlez-nous de votre projet
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-2 font-medium">
+            Sélectionnez un ou plusieurs besoins. Notre équipe SECCC vous recontactera rapidement.
+          </p>
+        </div>
 
-      <div className="p-8">
-        {etape === 1 && (
-          <div className="animate-fade-in">
-            <h3 className="text-xl font-semibold text-center mb-6">
-              Vous êtes ?
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {["Particulier", "Professionnel"].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setFormData({ ...formData, typeClient: type })}
-                  className={`p-6 border-2 rounded-lg text-lg font-medium transition-all duration-300 ${
-                    formData.typeClient === type
-                      ? "border-primary text-primary bg-red-50"
-                      : "border-gray-200 text-gray-600 hover:border-primary hover:text-primary"
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-            <div className="mt-8 flex justify-end">
-              <button
-                onClick={() => setEtape(2)}
-                disabled={!formData.typeClient}
-                className="px-6 py-3 bg-primary text-white rounded-md font-semibold disabled:bg-gray-300"
-              >
-                Suivant
-              </button>
-            </div>
-          </div>
-        )}
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
+          
+          {/* BARRE DE PROGRESSION */}
+          <div className="bg-slate-900 px-6 py-6 border-b border-slate-800">
+            <div className="flex items-center justify-between max-w-md mx-auto relative">
+              <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-700 -translate-y-1/2 z-0"></div>
+              <div 
+                className="absolute left-0 top-1/2 h-0.5 bg-red-500 -translate-y-1/2 z-0 transition-all duration-300"
+                style={{ width: etape === 1 ? '0%' : etape === 2 ? '50%' : '100%' }}
+              ></div>
 
-        {etape === 2 && (
-          <div className="animate-fade-in">
-            <h3 className="text-xl font-semibold text-center mb-6">
-              Quel type de bien souhaitez-vous équiper ?
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {["Maison", "Appartement", "Usine / Industriel"].map((bien) => (
-                <button
-                  key={bien}
-                  onClick={() => setFormData({ ...formData, typeBien: bien })}
-                  className={`p-4 border-2 rounded-lg text-center font-medium transition-all duration-300 ${
-                    formData.typeBien === bien
-                      ? "border-primary text-primary bg-red-50"
-                      : "border-gray-200 text-gray-600 hover:border-primary hover:text-primary"
-                  }`}
-                >
-                  {bien}
-                </button>
-              ))}
-            </div>
-            <div className="mt-8 flex justify-between">
-              <button
-                onClick={() => setEtape(1)}
-                className="px-6 py-3 text-gray-600 font-semibold hover:text-gray-900"
-              >
-                Retour
-              </button>
-              <button
-                onClick={() => setEtape(3)}
-                disabled={!formData.typeBien}
-                className="px-6 py-3 bg-primary text-white rounded-md font-semibold disabled:bg-gray-300"
-              >
-                Suivant
-              </button>
-            </div>
-          </div>
-        )}
-
-        {etape === 3 && (
-          <form onSubmit={soumettreFormulaire} className="animate-fade-in">
-            <h3 className="text-xl font-semibold text-center mb-6">
-              Vos Coordonnées
-            </h3>
-            <div className="space-y-4">
-              <input
-                type="text"
-                name="nom"
-                placeholder="Nom complet ou raison sociale"
-                onChange={handleInput}
-                required
-                className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="E-mail"
-                  onChange={handleInput}
-                  required
-                  className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                />
-                <input
-                  type="text"
-                  name="telephone"
-                  placeholder="Téléphone"
-                  onChange={handleInput}
-                  required
-                  className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                />
+              <div className="relative z-10 flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${etape >= 1 ? 'bg-red-500 text-white shadow-lg shadow-red-500/30' : 'bg-slate-800 text-slate-400'}`}>1</div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1.5">Profil</span>
               </div>
-              <input
-                type="text"
-                name="adresse"
-                placeholder="Adresse complète du projet"
-                onChange={handleInput}
-                required
-                className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
+              <div className="relative z-10 flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${etape >= 2 ? 'bg-red-500 text-white shadow-lg shadow-red-500/30' : 'bg-slate-800 text-slate-400'}`}>2</div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1.5">Prestations</span>
+              </div>
+              <div className="relative z-10 flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${etape === 3 ? 'bg-red-500 text-white shadow-lg shadow-red-500/30' : 'bg-slate-800 text-slate-400'}`}>3</div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1.5">Contact</span>
+              </div>
             </div>
+          </div>
 
-            <div className="mt-8 flex justify-between items-center">
-              <button
-                type="button"
-                onClick={() => setEtape(2)}
-                className="px-6 py-3 text-gray-600 font-semibold hover:text-gray-900"
-              >
-                Retour
-              </button>
-              <button
-                type="submit"
-                className="px-8 py-3 bg-primary text-white text-lg rounded-md font-bold hover:bg-red-700 shadow-lg"
-              >
-                Envoyer la demande
-              </button>
-            </div>
-          </form>
-        )}
+          <div className="p-8 sm:p-10">
+            <form onSubmit={handleSubmit}>
+
+              {/* ÉTAPE 1 : PROFIL CLIENT */}
+              {etape === 1 && (
+                <div className="space-y-6">
+                  <div className="text-center mb-6">
+                    <h2 className="text-lg font-black text-slate-900 uppercase">Vous êtes ?</h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div onClick={() => handleSelectUnique('typeClient', 'Particulier')} className={`p-6 rounded-2xl border-2 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center ${formData.typeClient === 'Particulier' ? 'border-red-500 bg-red-50/40 text-red-600 shadow-md' : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'}`}>
+                      <div className={`w-12 h-12 rounded-xl mb-3 flex items-center justify-center text-lg ${formData.typeClient === 'Particulier' ? 'bg-red-500 text-white' : 'bg-slate-50 text-slate-400'}`}>🏠</div>
+                      <span className="font-bold text-sm uppercase tracking-wider">Un Particulier</span>
+                    </div>
+                    <div onClick={() => handleSelectUnique('typeClient', 'Professionnel')} className={`p-6 rounded-2xl border-2 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center ${formData.typeClient === 'Professionnel' ? 'border-red-500 bg-red-50/40 text-red-600 shadow-md' : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'}`}>
+                      <div className={`w-12 h-12 rounded-xl mb-3 flex items-center justify-center text-lg ${formData.typeClient === 'Professionnel' ? 'bg-red-500 text-white' : 'bg-slate-50 text-slate-400'}`}>🏢</div>
+                      <span className="font-bold text-sm uppercase tracking-wider">Un Professionnel</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ÉTAPE 2 : CHOIX MULTIPLE */}
+              {etape === 2 && (
+                <div className="space-y-6">
+                  <div className="text-center mb-6">
+                    <h2 className="text-lg font-black text-slate-900 uppercase">Quels sont vos besoins ?</h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div onClick={() => handleToggleService('Plomberie')} className={`p-5 rounded-2xl border-2 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center relative ${formData.servicesChoisis.includes('Plomberie') ? 'border-red-500 bg-red-50/40 text-red-600 shadow-md' : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'}`}>
+                      {formData.servicesChoisis.includes('Plomberie') && <span className="absolute top-2 right-3 text-red-600 font-bold text-xs">✓</span>}
+                      <div className={`w-10 h-10 rounded-xl mb-2 flex items-center justify-center text-base ${formData.servicesChoisis.includes('Plomberie') ? 'bg-red-500 text-white' : 'bg-slate-50 text-slate-400'}`}>💧</div>
+                      <span className="font-bold text-xs uppercase tracking-wider">Plomberie</span>
+                    </div>
+                    <div onClick={() => handleToggleService('Chauffage')} className={`p-5 rounded-2xl border-2 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center relative ${formData.servicesChoisis.includes('Chauffage') ? 'border-red-500 bg-red-50/40 text-red-600 shadow-md' : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'}`}>
+                      {formData.servicesChoisis.includes('Chauffage') && <span className="absolute top-2 right-3 text-red-600 font-bold text-xs">✓</span>}
+                      <div className={`w-10 h-10 rounded-xl mb-2 flex items-center justify-center text-base ${formData.servicesChoisis.includes('Chauffage') ? 'bg-red-500 text-white' : 'bg-slate-50 text-slate-400'}`}>🔥</div>
+                      <span className="font-bold text-xs uppercase tracking-wider">Chauffage</span>
+                    </div>
+                    <div onClick={() => handleToggleService('Climatisation')} className={`p-5 rounded-2xl border-2 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center relative ${formData.servicesChoisis.includes('Climatisation') ? 'border-red-500 bg-red-50/40 text-red-600 shadow-md' : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'}`}>
+                      {formData.servicesChoisis.includes('Climatisation') && <span className="absolute top-2 right-3 text-red-600 font-bold text-xs">✓</span>}
+                      <div className={`w-10 h-10 rounded-xl mb-2 flex items-center justify-center text-base ${formData.servicesChoisis.includes('Climatisation') ? 'bg-red-500 text-white' : 'bg-slate-50 text-slate-400'}`}>❄️</div>
+                      <span className="font-bold text-xs uppercase tracking-wider">Climatisation</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ÉTAPE 3 : COORDONNÉES */}
+              {etape === 3 && (
+                <div className="space-y-5">
+                  <div className="text-center mb-4">
+                    <h2 className="text-lg font-black text-slate-900 uppercase">Vos Coordonnées</h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 tracking-wider">Nom complet *</label>
+                      <input type="text" name="nom" required value={formData.nom} onChange={handleChange} placeholder="Yassine Frikha" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 tracking-wider">Téléphone *</label>
+                      <input type="tel" name="telephone" required value={formData.telephone} onChange={handleChange} placeholder="+216 -- --- ---" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 tracking-wider">Adresse e-mail *</label>
+                    <input type="email" name="email" required value={formData.email} onChange={handleChange} placeholder="exemple@gmail.com" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500" />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1 tracking-wider">Description de votre projet</label>
+                    <textarea name="description" rows="3" value={formData.description} onChange={handleChange} placeholder="Détaillez vos travaux..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 resize-none"></textarea>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
+                {etape > 1 ? (
+                  <button type="button" onClick={etapePrecedente} className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider rounded-xl">Retour</button>
+                ) : <div />}
+
+                {etape < 3 ? (
+                  <button
+                    type="button"
+                    onClick={etapeSuivante}
+                    disabled={etape === 1 ? !formData.typeClient : formData.servicesChoisis.length === 0}
+                    className={`px-7 py-3 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md ${
+                      (etape === 1 && !formData.typeClient) || (etape === 2 && formData.servicesChoisis.length === 0)
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                        : 'bg-red-600 hover:bg-red-700 shadow-red-600/10'
+                    }`}
+                  >
+                    Suivant
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={envoiEnCours}
+                    className={`px-7 py-3 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-red-600/20 transition-all ${envoiEnCours ? 'bg-slate-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+                  >
+                    {envoiEnCours ? 'Envoi en cours...' : 'Envoyer ma demande'}
+                  </button>
+                )}
+              </div>
+
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );

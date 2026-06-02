@@ -10,17 +10,16 @@ import Footer from "./components/Footer";
 import AdminBarrier from "./components/AdminBarrier.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
+import RealisationsPage from "./pages/Realisations.jsx";
+import ServicesPage from "./pages/ServicePage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
 import DevisPage from "./pages/DevisPage.jsx";
 import FacturePage from "./pages/FacturePage.jsx";
-
-{
-  /*import Plomberie from './pages/PlomberiePage.jsx';
+import Plomberie from './pages/PlomberiePage.jsx';
 import Chauffage from './pages/ChauffagePage.jsx';
-import Climatisation from './pages/ClimatisationPage.jsx';*/
-}
+import Climatisation from './pages/ClimatisationPage.jsx';
 
-// 1. Création du composant de protection (Interne au fichier pour plus de simplicité)
+// Composant de protection des routes Admin
 const ProtectedRoute = ({ user, children }) => {
   if (user.role !== "admin") {
     return <Navigate to="/" replace />;
@@ -29,13 +28,13 @@ const ProtectedRoute = ({ user, children }) => {
 };
 
 function App() {
-  // 1. Vérification du rôle au chargement
+  // Vérification du rôle au chargement
   const [user, setUser] = useState(() => {
     const roleSauvegarde = sessionStorage.getItem("roleSECCC");
     return { role: roleSauvegarde || "user" };
   });
 
-  // 2. Gestion des accès via l'URL (ex: localhost:5173/?acces=admin)
+  // Gestion des accès via l'URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
@@ -52,7 +51,6 @@ function App() {
 
   return (
     <Router>
-      {/* On entoure tout avec AdminBarrier pour activer la touche secrète */}
       <AdminBarrier>
         <div className="min-h-screen flex flex-col bg-slate-50">
           <Navbar user={user} />
@@ -62,12 +60,14 @@ function App() {
               {/* --- Routes Publiques --- */}
               <Route path="/" element={<HomePage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/realisations" element={<RealisationsPage />} />
+              <Route path="/services" element={<ServicesPage />} />
               <Route path="/devis" element={<DevisPage />} />
 
-              {/* Nouvelles routes services que nous avons créées */}
-              {/*<Route path="/services/plomberie-sanitaire" element={<Plomberie />} />
-              <Route path="/services/chauffage" element={<Chauffage />} />
-              <Route path="/services/climatisation" element={<Climatisation />} />*/}
+              {/* --- Routes Services alignées sur la Navbar --- */}
+              <Route path="/services/plomberie-sanitaire" element={<Plomberie />} />
+              <Route path="/services/chauffage-central" element={<Chauffage />} />
+              <Route path="/services/climatisation" element={<Climatisation />} />
 
               {/* --- Route Admin : Cachée ET Protégée --- */}
               <Route
