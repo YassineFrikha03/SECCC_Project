@@ -14,6 +14,9 @@ const AdminPage = () => {
   const [statusScan, setStatusScan] = useState("Chargement de l'IA...");
   const videoRef = useRef();
 
+  // ⚡ NOUVEAU : État pour stocker le devis cliqué et afficher ses détails
+  const [selectedDevis, setSelectedDevis] = useState(null);
+
   // Chargement initial des devis
   useEffect(() => {
     const fetchDevis = async () => {
@@ -23,7 +26,7 @@ const AdminPage = () => {
         setChargement(false);
       } catch (err) {
         console.error("Erreur de récupération :", err);
-        setErreur("Impossible de charger les devis. Vérifiez que le backend is allumé.");
+        setErreur("Impossible de charger les devis. Vérifiez que le backend est allumé.");
         setChargement(false);
       }
     };
@@ -37,6 +40,8 @@ const AdminPage = () => {
       try {
         await api.delete(`/devis/${id}`);
         setListeDevis(listeDevis.filter((devis) => devis._id !== id));
+        // Si le devis supprimé était ouvert, on ferme la modale de détails
+        if (selectedDevis?._id === id) setSelectedDevis(null);
       } catch (error) {
         console.error("Erreur serveur lors de la suppression :", error);
         alert("Erreur lors de la suppression du devis.");
@@ -73,12 +78,9 @@ const AdminPage = () => {
   // ==========================================
   // ⚡ ENREGISTREMENT FACE ID INTERNE
   // ==========================================
-  
-  // 1. Ouvrir la modale et charger les modèles
   const ouvrirConfigurationFaceID = async () => {
     setModeScan(true);
     setStatusScan("Chargement de l'Intelligence Artificielle...");
-    
     try {
       await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
       await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
@@ -90,7 +92,6 @@ const AdminPage = () => {
     }
   };
 
-  // 2. Allumer la webcam
   const demarrerCamera = () => {
     navigator.mediaDevices.getUserMedia({ video: true })
       .then((stream) => {
@@ -105,18 +106,14 @@ const AdminPage = () => {
       });
   };
 
-  // 3. Scanner et sauvegarder le visage
   const scannerEtEnregistrer = async () => {
     setStatusScan("Analyse en cours... Veuillez patienter.");
-    
     try {
       const detection = await faceapi.detectSingleFace(videoRef.current)
                                      .withFaceLandmarks()
                                      .withFaceDescriptor();
-
       if (detection) {
         const empreinte = Array.from(detection.descriptor);
-        // Sauvegarde locale du visage maître
         localStorage.setItem('adminVisage', JSON.stringify(empreinte));
         setStatusScan("✅ Visage enregistré avec succès ! Vous pouvez fermer cette fenêtre.");
         arreterCamera();
@@ -128,7 +125,6 @@ const AdminPage = () => {
     }
   };
 
-  // 4. Arrêter proprement la caméra
   const arreterCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       videoRef.current.srcObject.getTracks().forEach(track => track.stop());
@@ -139,7 +135,6 @@ const AdminPage = () => {
     arreterCamera();
     setModeScan(false);
   };
-
   // ==========================================
 
   // Filtrage
@@ -149,7 +144,6 @@ const AdminPage = () => {
   });
 
   return (
-    /* 🛠️ MODIFICATION ICI : Changement de py-12 en pt-28 pb-12 pour passer sous la Navbar fixe */
     <div className="max-w-7xl mx-auto px-4 pt-28 pb-12 sm:px-6 lg:px-8 relative">
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -158,8 +152,6 @@ const AdminPage = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 items-center">
-          
-          {/* BOUTON CONFIGURATION FACE ID */}
           <button 
             onClick={ouvrirConfigurationFaceID}
             className="bg-slate-800 text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-slate-900 transition-colors flex items-center gap-2 border border-slate-700"
@@ -218,7 +210,13 @@ const AdminPage = () => {
                 )}
 
                 {filteredDevis.map((devis) => (
-                  <tr key={devis._id} className="hover:bg-gray-50 transition-colors">
+                  /* ⚡ MODIFICATION : La ligne entière devient cliquable et affiche un curseur pointeur */
+                  <tr 
+                    key={devis._id} 
+                    onClick={() => setSelectedDevis(devis)}
+                    className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                    title="Cliquez pour voir l'intégralité des détails"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-bold text-secondary text-base">{devis.nom}</div>
                       <div className="text-sm text-gray-500 font-medium">{devis.typeClient}</div>
@@ -236,7 +234,8 @@ const AdminPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex justify-end gap-3">
+                      {/* ⚡ MODIFICATION : Ajout de e.stopPropagation() pour ne pas ouvrir la modale par erreur lors des actions */}
+                      <div className="flex justify-end gap-3" onClick={(e) => e.stopPropagation()}>
                         <label className="cursor-pointer bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-md font-bold text-sm transition-colors border border-blue-200 hover:border-blue-600 shadow-sm">
                           Envoyer Devis PDF
                           <input 
@@ -265,42 +264,125 @@ const AdminPage = () => {
         </div>
       )}
 
-      {/* ================= MODALE FACE ID ================= */}
+      {/* ================= MODALE SÉCURITÉ FACE ID ================= */}
       {modeScan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm">
           <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md text-center relative border border-slate-200">
             <button onClick={fermerModale} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 font-bold text-xl">✕</button>
-            
             <h2 className="text-2xl font-black text-slate-900 mb-2">Configuration Face ID</h2>
             <p className="text-sm text-slate-500 mb-6 font-medium bg-slate-50 p-3 rounded-lg">{statusScan}</p>
-            
             <div className="relative w-full h-64 bg-black rounded-xl overflow-hidden mb-6 border-4 border-slate-200 shadow-inner">
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                muted 
-                className="w-full h-full object-cover transform scale-x-[-1]" 
-              />
+              <video ref={videoRef} autoPlay muted className="w-full h-full object-cover transform scale-x-[-1]" />
             </div>
-            
             <div className="flex gap-3 justify-center">
-              <button 
-                onClick={demarrerCamera} 
-                className="px-5 py-3 bg-slate-800 hover:bg-black text-white text-sm font-bold uppercase tracking-wider rounded-xl shadow-lg transition-all"
-              >
-                1. Allumer Caméra
-              </button>
-              <button 
-                onClick={scannerEtEnregistrer} 
-                className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold uppercase tracking-wider rounded-xl shadow-lg transition-all"
-              >
-                2. Scanner
-              </button>
+              <button onClick={demarrerCamera} className="px-5 py-3 bg-slate-800 hover:bg-black text-white text-sm font-bold uppercase tracking-wider rounded-xl shadow-lg transition-all">1. Allumer Caméra</button>
+              <button onClick={scannerEtEnregistrer} className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold uppercase tracking-wider rounded-xl shadow-lg transition-all">2. Scanner</button>
             </div>
           </div>
         </div>
       )}
-      {/* =================================================== */}
+
+      {/* ================= ⚡ NOUVEAU : MODALE DE DÉTAILS DU FORMULAIRE CLIENT ================= */}
+      {selectedDevis && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-100 transform transition-all mx-4">
+            
+            {/* Header de la modale */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold tracking-wide">Fiche Client & Détails Demande</h2>
+                <p className="text-slate-400 text-xs font-medium mt-0.5">ID Projet : {selectedDevis._id}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedDevis(null)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Contenu / Body */}
+            <div className="p-6 max-h-[75vh] overflow-y-auto space-y-6">
+              
+              {/* Section 1 : Coordonnées du Client */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 border-b pb-1">👤 Informations Personnelles</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-3 rounded-xl">
+                    <span className="block text-xs font-semibold text-gray-400">Nom Complet</span>
+                    <span className="text-secondary font-bold text-base">{selectedDevis.nom}</span>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-xl">
+                    <span className="block text-xs font-semibold text-gray-400">Type de Client</span>
+                    <span className="text-slate-700 font-bold">{selectedDevis.typeClient || "Non spécifié"}</span>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-xl">
+                    <span className="block text-xs font-semibold text-gray-400">Adresse Email</span>
+                    <a href={`mailto:${selectedDevis.email}`} className="text-primary font-semibold hover:underline block truncate">{selectedDevis.email}</a>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-xl">
+                    <span className="block text-xs font-semibold text-gray-400">Téléphone</span>
+                    <a href={`tel:${selectedDevis.telephone}`} className="text-slate-800 font-bold block">{selectedDevis.telephone}</a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2 : Détails techniques du bâtiment et projet */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 border-b pb-1">🏗️ Spécifications du Projet</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-3 rounded-xl">
+                    <span className="block text-xs font-semibold text-gray-400">Nature du Bâtiment</span>
+                    <span className="px-2.5 py-0.5 inline-block text-xs font-bold rounded-full bg-red-100 text-red-800 mt-1">
+                      {selectedDevis.typeBien || "Non spécifié"}
+                    </span>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-xl">
+                    <span className="block text-xs font-semibold text-gray-400">Prestations demandées</span>
+                    <span className="text-slate-700 font-bold block text-sm mt-1">
+                      {selectedDevis.servicesChoisis || "Prestation standard"}
+                    </span>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-xl sm:col-span-2">
+                    <span className="block text-xs font-semibold text-gray-400">📍 Adresse des Travaux</span>
+                    <span className="text-slate-800 font-medium text-sm">{selectedDevis.adresse || "Aucune adresse renseignée"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3 : Message ou précisions additionnelles */}
+              {selectedDevis.description && (
+                <div>
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b pb-1">📝 Description / Message du client</h3>
+                  <div className="bg-amber-50/60 border border-amber-100 p-4 rounded-xl text-slate-700 text-sm font-medium leading-relaxed whitespace-pre-line">
+                    {selectedDevis.description}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer de la modale */}
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+              <button 
+                onClick={() => {
+                  handleDelete(selectedDevis._id);
+                }}
+                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold transition-colors"
+              >
+                Supprimer le dossier
+              </button>
+              <button 
+                onClick={() => setSelectedDevis(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition-colors"
+              >
+                Fermer la vue
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+      {/* ======================================================================================= */}
 
     </div>
   );

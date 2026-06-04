@@ -28,31 +28,25 @@ const AdminBarrier = ({ children }) => {
     chargerModelesAuDemarrage();
   }, []);
 
-  // 2. ÉCOUTEUR DU CLAVIER (Raccourci secret "P")
+  // 2. 🔄 NOUVEAU : ÉCOUTEUR DU SIGNAL SECRET (Plus de clavier !)
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (
-        e.key.toLowerCase() === 'p' && 
-        e.target.tagName !== 'INPUT' && 
-        e.target.tagName !== 'TEXTAREA'
-      ) {
-        e.preventDefault();
-        
-        if (sessionStorage.getItem("roleSECCC") === "admin") {
-          navigate('/admin-seccc');
-          return;
-        }
-
-        setEtape(1);
-        allumerCameraEtScanner();
+    const handleSecretTrigger = () => {
+      // Si déjà connecté admin dans la session, on redirige directement
+      if (sessionStorage.getItem("roleSECCC") === "admin") {
+        navigate('/admin-seccc');
+        return;
       }
+
+      // Sinon, on ouvre la modale et on lance la caméra
+      setEtape(1);
+      allumerCameraEtScanner();
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('open-seccc-login', handleSecretTrigger);
+    return () => window.removeEventListener('open-seccc-login', handleSecretTrigger);
   }, [navigate, iaChargee]);
 
-  // 3. ALLUMAGE DE LA CAMÉRA AVEC FORCE DE LECTURE
+  // 3. ALLUMAGE DE LA CAMÉRA
   const allumerCameraEtScanner = async () => {
     setErreur('');
     setStatusScan("Vérification des droits...");
@@ -65,7 +59,7 @@ const AdminBarrier = ({ children }) => {
     }
 
     if (!iaChargee) {
-      setErreur("❌ Les fichiers de l'IA sont encore en cours de téléchargement. Réessayez dans 3 secondes.");
+      setErreur("❌ Les fichiers de l'IA chargent encore. Réessayez dans 3 secondes.");
       setStatusScan("Veuillez patienter.");
       return;
     }
@@ -76,13 +70,9 @@ const AdminBarrier = ({ children }) => {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        
-        // ⚡ CORRECTION : On force le navigateur à lancer la lecture vidéo réelle
         await videoRef.current.play();
-        
         setStatusScan("Analyse faciale en cours... Ne bougez pas.");
         
-        // Laisse 1.5s à la caméra pour ajuster la lumière et éviter un scan trop sombre
         setTimeout(() => {
           executerAnalyseFaciale(JSON.parse(visageSauvegardeStr));
         }, 1500);
@@ -103,7 +93,6 @@ const AdminBarrier = ({ children }) => {
                                              .withFaceLandmarks()
                                              .withFaceDescriptor();
 
-      // On éteint la caméra immédiatement après la capture
       couperCamera();
 
       if (!detectionActuelle) {
@@ -117,7 +106,6 @@ const AdminBarrier = ({ children }) => {
 
       console.log("📊 [SECCC] Distance de correspondance faciale :", distance);
 
-      // Seuil fixé à 0.60 pour la flexibilité en luminosité ambiante
       if (distance < 0.6) {
         setStatusScan("✅ Identité confirmée.");
         setEtape(2); 
@@ -182,14 +170,7 @@ const AdminBarrier = ({ children }) => {
                 </p>
                 
                 <div className="relative w-full h-60 bg-black rounded-xl overflow-hidden mb-4 border-4 border-slate-900 shadow-inner">
-                  {/* ⚡ CORRECTION : Ajout de playsInline et force de l'autoPlay */}
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
-                    muted 
-                    playsInline
-                    className="w-full h-full object-cover transform scale-x-[-1]" 
-                  />
+                  <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover transform scale-x-[-1]" />
                   {!erreur && <div className="absolute top-0 left-0 w-full h-1 bg-red-500 shadow-[0_0_15px_4px_rgba(239,68,68,0.7)] animate-scan" style={{ animation: 'scan 2s linear infinite' }} />}
                 </div>
 

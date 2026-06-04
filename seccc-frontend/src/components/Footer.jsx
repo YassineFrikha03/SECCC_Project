@@ -1,9 +1,31 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import whatsappIcon from '../assets/whatsapp.png';
 import logo from '../assets/logo.png';
 
 const Footer = () => {
+  // ⚡ Références pour suivre discrètement le triple-clic secret sans perturber React
+  const clickCountRef = useRef(0);
+  const timeoutRef = useRef(null);
+
+  const handleSecretTrigger = () => {
+    clickCountRef.current += 1;
+    
+    if (clickCountRef.current === 3) {
+      // Émission de l'événement global intercepté par votre AdminBarrier
+      window.dispatchEvent(new Event('open-seccc-login'));
+      clickCountRef.current = 0;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      return;
+    }
+
+    // Réinitialisation du compteur si vous mettez plus d'une seconde entre les clics
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      clickCountRef.current = 0;
+    }, 1000);
+  };
+
   return (
     <footer className="bg-[#0f172a] text-gray-300 pt-16 pb-8 border-t-4 border-primary print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -22,7 +44,7 @@ const Footer = () => {
               Société d'equipement chaufage central et climatisation spécialisée dans la plomberie sanitaire, le chauffage central et la climatisation en Tunisie.
             </p>
             <div className="flex space-x-4">
-              {/* Icônes Réseaux Sociaux (Exemples) */}
+              {/* Icônes Réseaux Sociaux */}
               <a href="#" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-primary transition-colors">
                 <span className="text-white font-bold">in</span>
               </a>
@@ -87,7 +109,13 @@ const Footer = () => {
 
         {/* Barre de Copyright */}
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
-          <p>© {new Date().getFullYear()} SECCC. Tous droits réservés.</p>
+          {/* ⚡ MODIFICATION : Rendu du texte non sélectionnable et liaison à l'événement secret */}
+          <p 
+            onClick={handleSecretTrigger} 
+            className="cursor-default select-none transition-colors duration-300"
+          >
+            © {new Date().getFullYear()} SECCC. Tous droits réservés.
+          </p>
           <div className="flex space-x-4 mt-4 md:mt-0">
             <a href="#" className="hover:text-white transition-colors">Mentions Légales</a>
             <a href="#" className="hover:text-white transition-colors">Politique de Confidentialité</a>
