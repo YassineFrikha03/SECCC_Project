@@ -45,11 +45,14 @@ const FacturePage = () => {
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8 pt-24 font-sans flex justify-center print:bg-white print:p-0 print:block">
       
       {/* ==========================================
-          CSS MAGIQUE POUR LE RESSORT ET L'IMPRESSION
+          CSS COMPATIBLE 100% M3A CHROME MULTI-PAGE
           ========================================== */}
       <style type="text/css" media="print">
         {`
-          @page { size: A4 portrait; margin: 0; }
+          @page { 
+            size: A4 portrait; 
+            margin: 20mm 15mm 20mm 15mm;
+          }
           
           body { 
             background-color: white !important; 
@@ -62,37 +65,47 @@ const FacturePage = () => {
           .no-print { display: none !important; }
           
           .print-area { 
-            width: 210mm !important; 
-            min-height: 297mm !important;
-            margin: 0 auto !important; 
-            padding: 15mm 15mm !important; 
+            width: 100% !important; 
+            min-height: 0 !important;
+            margin: 0 !important; 
+            padding: 0 !important; 
             box-shadow: none !important;
             border: none !important;
+            position: static !important;
           }
 
-          /* Force la répétition de l'en-tête sur chaque page */
-          thead.report-header { display: table-header-group; }
-          /* Force la répétition du pied de page en bas de chaque page */
-          tfoot.report-footer { display: table-footer-group; }
+          /* Force la répétition native parfaite sur chaque page sans bug de flex */
+          thead.report-header { 
+            display: table-header-group !important; 
+          }
           
-          .item-row { page-break-inside: avoid; break-inside: avoid; }
-          .keep-together { page-break-inside: avoid; break-inside: avoid; }
-        `}
-      </style>
-      
-      {/* Classe spécifique pour le ressort visuel sur l'écran et l'impression */}
-      <style type="text/css">
-        {`
-          .spacer-row { height: 100%; }
-          .spacer-row td { border: none !important; }
+          tfoot.report-footer { 
+            display: table-footer-group !important; 
+          }
+          
+          .item-row, .keep-together { 
+            page-break-inside: avoid !important; 
+            break-inside: avoid !important; 
+          }
+
+          /* Nettoyage pour les tableaux imbriqués wa9t l'impression */
+          .nested-print-table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .nested-print-table td {
+            border: none !important;
+            padding: 0 !important;
+          }
         `}
       </style>
 
       <div className="w-full max-w-7xl flex flex-col xl:flex-row gap-8 items-start print:block print:w-full print:max-w-none print:m-0">
         
-        {/* ==========================================
-            PANNEAU DE CONTRÔLE
-            ========================================== */}
+        {/* PANNEAU DE CONTRÔLE */}
         <div className="w-full xl:w-1/3 bg-white p-6 rounded-lg shadow-md no-print sticky top-24 z-30">
           <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Paramètres de la Facture</h2>
 
@@ -170,87 +183,94 @@ const FacturePage = () => {
           </button>
         </div>
 
-        {/* ==========================================
-            LA FACTURE VISUELLE (AVEC TABLEAU PLEINE HAUTEUR)
-            ========================================== */}
+        {/* FACTURE VISUELLE */}
         <div className="bg-white shadow-2xl print-area w-[210mm] min-h-[297mm] mx-auto p-8 sm:p-12 text-gray-900 relative">
           
-          {/* Filigrane centré au milieu de la feuille */}
           <img 
             src={logo} 
             alt="" 
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3/5 opacity-[0.03] pointer-events-none z-0 filter grayscale" 
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3/5 opacity-[0.03] pointer-events-none z-0 filter grayscale print:hidden" 
           />
 
-          {/* TABLEAU PRINCIPAL : `h-full` force le tableau à s'étirer sur toute la feuille */}
-          <table className="w-full h-full border-collapse relative z-10">
+          <table className="w-full border-collapse">
             
+            {/* ==========================================
+                THEAD RÉPARÉ : PLUS DE FLEX, REPETITION OK
+                ========================================== */}
             <thead className="report-header">
               <tr>
-                <td colSpan="5" className="pb-8">
-                  <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-4 mt-2">
-                    
-                    {/* Gauche : Logo et Infos SECCC */}
-                    <div className="flex flex-col items-start gap-4">
-                      <img src={logo} alt="SECCC Logo" className="h-24 object-contain mb-2" />
-                      <div className="flex flex-col text-gray-700 text-sm font-medium">
-                        <h1 className="text-3xl font-black text-blue-700 tracking-tight">SECCC</h1>
-                        <p className="text-gray-600 text-sm mt-1">Chauffage Central et Climatisation</p>
-                        
-                        <div className="text-gray-500 text-xs mt-4 leading-relaxed">
-                          <p>12 Rue Exemple, Ariana 2080, Tunisie</p>
-                          <p><strong>Tél :</strong> +216 24 285 958</p>
-                          <p className="mt-2 text-xs"><strong>M.F :</strong> 1234567/X/A/M/000</p>
-                          <p><strong>R.C :</strong> B12345678912</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Droite : Titre et encadré Client */}
-                    <div className="text-right flex flex-col items-end">
-                      <h2 className="text-5xl font-black text-gray-900 uppercase tracking-tighter mb-4">Facture</h2>
-                      
-                      <div className="bg-gray-50 p-5 rounded border border-gray-200 text-left w-80 shadow-sm mt-2">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Numéro</p>
-                            <p className="font-bold text-sm text-gray-900">{numeroFacture}</p>
+                <td colSpan="5" className="pb-4">
+                  {/* Utilisation d'un sous-tableau pour l'alignement gauche/droite propre au Print */}
+                  <table className="nested-print-table">
+                    <tbody>
+                      <tr>
+                        {/* Côté Gauche : Infos Boite */}
+                        <td className="w-1/2 align-top text-left pb-6">
+                          <img src={logo} alt="SECCC Logo" className="h-20 object-contain mb-2" />
+                          <div className="text-gray-700 text-sm font-medium">
+                            <h1 className="text-3xl font-black text-blue-700 tracking-tight">SECCC</h1>
+                            <p className="text-gray-600 text-xs mt-0.5">Chauffage Central et Climatisation</p>
+                            <div className="text-gray-500 text-[11px] mt-3 leading-relaxed">
+                              <p>14 Rue Ibn Elhani Immeuble IRIS, Ariana, Tunisie</p>
+                              <p><strong>Tél :</strong> +216 24 285 958 | +216 52 391 917</p>
+                              <p className="text-[10px]"><strong>M.F :</strong> 1234567/X/A/M/000</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Date</p>
-                            <p className="font-medium text-sm text-gray-800">{new Date().toLocaleDateString('fr-FR')}</p>
+                        </td>
+
+                        {/* Côté Droit : Facture & Infos Client */}
+                        <td className="w-1/2 align-top text-right pb-6">
+                          <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tighter mb-3">Facture</h2>
+                          
+                          <div className="bg-gray-50 p-4 rounded border border-gray-200 text-left w-72 inline-block shadow-sm">
+                            <table className="nested-print-table mb-2">
+                              <tbody>
+                                <tr>
+                                  <td>
+                                    <p className="text-[9px] text-gray-400 uppercase font-bold">Numéro</p>
+                                    <p className="font-bold text-xs text-gray-900">{numeroFacture}</p>
+                                  </td>
+                                  <td className="text-right">
+                                    <p className="text-[9px] text-gray-400 uppercase font-bold">Date</p>
+                                    <p className="font-medium text-xs text-gray-800">{new Date().toLocaleDateString('fr-FR')}</p>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+
+                            <div className="border-t border-gray-200 my-2"></div>
+
+                            <div>
+                              <h3 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Facturé à</h3>
+                              <p className="font-black text-base text-gray-900 leading-tight">{client.nom || "Nom du client"}</p>
+                              {client.matriculeFiscal && (
+                                <p className="text-[11px] text-gray-500 font-mono mt-0.5">M.F : {client.matriculeFiscal}</p>
+                              )}
+                              <p className="text-xs text-gray-600 mt-1.5 whitespace-pre-wrap leading-tight">
+                                {client.adresse || "Adresse complète du client"}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-
-                        <div className="border-t border-gray-200 my-4"></div>
-
-                        <div>
-                          <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Facturé à</h3>
-                          <p className="font-black text-lg text-gray-900 leading-tight">{client.nom || "Nom du client"}</p>
-                          {client.matriculeFiscal && (
-                            <p className="text-xs text-gray-600 mt-1 font-mono">M.F : {client.matriculeFiscal}</p>
-                          )}
-                          <p className="text-xs text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">
-                            {client.adresse || "Adresse complète du client"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div className="border-b-2 border-gray-800 w-full mb-4"></div>
                 </td>
               </tr>
               
-              <tr className="border-b-2 border-gray-900 text-gray-900">
-                <th className="py-4 px-2 font-bold uppercase text-xs tracking-wider">Description</th>
-                <th className="py-4 px-2 text-center font-bold uppercase text-xs tracking-wider w-20">Qté</th>
-                <th className="py-4 px-2 text-right font-bold uppercase text-xs tracking-wider w-32">P.U HT</th>
-                <th className="py-4 px-2 text-right font-bold uppercase text-xs tracking-wider w-36">Total HT</th>
+              {/* Header des Colonnes du Tableau */}
+              <tr className="border-b-2 border-gray-900 text-gray-900 bg-gray-50">
+                <th className="py-2.5 px-2 text-left font-bold uppercase text-xs tracking-wider">Description</th>
+                <th className="py-2.5 px-2 text-center font-bold uppercase text-xs tracking-wider w-20">Qté</th>
+                <th className="py-2.5 px-2 text-right font-bold uppercase text-xs tracking-wider w-32">P.U HT</th>
+                <th className="py-2.5 px-2 text-right font-bold uppercase text-xs tracking-wider w-36">Total HT</th>
                 <th className="p-0 print:hidden border-none w-8"></th> 
               </tr>
             </thead>
 
-            {/* CORPS DE LA FACTURE (align-top colle les articles en haut) */}
-            <tbody className="align-top">
+            {/* LES ARTICLES */}
+            <tbody>
               {articles.length === 0 && (
                 <tr>
                   <td colSpan="5" className="py-12 text-center text-gray-400 italic border-b border-gray-100">
@@ -260,78 +280,74 @@ const FacturePage = () => {
               )}
               {articles.map((article) => (
                 <tr key={article.id} className="item-row border-b border-gray-100 hover:bg-gray-50 transition-colors tabular-nums">
-                  <td className="py-5 px-2 text-gray-800 font-medium">{article.description}</td>
-                  <td className="py-5 px-2 text-center text-gray-600 tabular-nums">{article.quantite}</td>
-                  <td className="py-5 px-2 text-right text-gray-600 tabular-nums">{formatTND(article.prixUnitaire)}</td>
-                  <td className="py-5 px-2 text-right font-bold text-gray-900 tabular-nums">{formatTND(article.totalHT)}</td>
+                  <td className="py-3.5 px-2 text-gray-800 font-medium text-sm">{article.description}</td>
+                  <td className="py-3.5 px-2 text-center text-gray-600 text-sm tabular-nums">{article.quantite}</td>
+                  <td className="py-3.5 px-2 text-right text-gray-600 text-sm tabular-nums">{formatTND(article.prixUnitaire)}</td>
+                  <td className="py-3.5 px-2 text-right font-bold text-gray-900 text-sm tabular-nums">{formatTND(article.totalHT)}</td>
                   <td className="p-0 print:hidden text-center pl-2">
                     <button onClick={() => supprimerArticle(article.id)} className="text-red-300 hover:text-red-600 font-bold text-lg">×</button>
                   </td>
                 </tr>
               ))}
-
-              {/* === LA LIGNE RESSORT MAGIQUE === */}
-              {/* Elle prend 100% de la hauteur vide restante et pousse le reste vers le bas */}
-              <tr className="spacer-row">
-                <td colSpan="5"></td>
-              </tr>
             </tbody>
 
-            {/* LES TOTAUX (Protégés contre la coupure et collés en bas par le ressort) */}
-            <tbody className="keep-together align-bottom">
+            {/* LES TOTAUX (Suivent uniquement la fin des articles) */}
+            <tbody className="keep-together border-none">
               <tr>
                 <td colSpan="2" className="border-none"></td>
-                <td className="py-2 px-2 text-gray-500 text-sm">Total HT</td>
-                <td className="py-2 px-2 text-right font-medium text-gray-900 text-sm tabular-nums">{formatTND(totalHT)}</td>
+                <td className="py-2 px-2 text-gray-500 text-sm border-b border-gray-100">Total HT</td>
+                <td className="py-2 px-2 text-right font-medium text-gray-900 text-sm tabular-nums border-b border-gray-100">{formatTND(totalHT)}</td>
                 <td className="print:hidden border-none"></td>
               </tr>
               <tr>
                 <td colSpan="2" className="border-none"></td>
-                <td className="py-2 px-2 text-gray-500 text-sm">TVA (19%)</td>
-                <td className="py-2 px-2 text-right text-gray-900 text-sm tabular-nums">{formatTND(montantTVA)}</td>
+                <td className="py-2 px-2 text-gray-500 text-sm border-b border-gray-100">TVA (19%)</td>
+                <td className="py-2 px-2 text-right text-gray-900 text-sm tabular-nums border-b border-gray-100">{formatTND(montantTVA)}</td>
                 <td className="print:hidden border-none"></td>
               </tr>
               {timbreActif && (
                 <tr>
                   <td colSpan="2" className="border-none"></td>
-                  <td className="py-2 px-2 text-gray-500 text-sm">Timbre Fiscal</td>
-                  <td className="py-2 px-2 text-right text-gray-800 text-sm tabular-nums">{formatTND(1.000)}</td>
+                  <td className="py-2 px-2 text-gray-500 text-sm border-b border-gray-100">Timbre Fiscal</td>
+                  <td className="py-2 px-2 text-right text-gray-800 text-sm tabular-nums border-b border-gray-100">{formatTND(1.000)}</td>
                   <td className="print:hidden border-none"></td>
                 </tr>
               )}
               <tr className="border-t border-gray-900">
                 <td colSpan="2" className="border-none"></td>
-                <td className="py-4 px-2 font-bold text-gray-900 text-sm uppercase tracking-widest">Total TTC</td>
-                <td className="py-4 px-2 text-right font-bold text-lg text-gray-900 tabular-nums">{formatTND(totalTTC)}</td>
+                <td className="py-3 px-2 font-bold text-gray-900 text-sm uppercase tracking-widest">Total TTC</td>
+                <td className="py-3 px-2 text-right font-bold text-lg text-red-600 tabular-nums">{formatTND(totalTTC)}</td>
                 <td className="print:hidden border-none"></td>
               </tr>
             </tbody>
 
-            {/* LE PIED DE PAGE : Banque et Signature */}
-            {/* Utilisé comme TFOOT pour s'imprimer tout en bas, sous les totaux */}
+            {/* ==========================================
+                TFOOT RÉPARÉ : REPETITION PARFAITE EN BAS
+                ========================================== */}
             <tfoot className="report-footer align-bottom">
               <tr>
-                <td colSpan="5">
-                  <div className="border-t-2 border-gray-900 pt-6 mt-8 flex flex-row justify-between items-start text-xs text-gray-600 bg-white tabular-nums w-full">
-                    
-                    {/* GAUCHE : Coordonnées Bancaires */}
-                    <div className="w-1/2 flex flex-col items-start text-left pr-4">
-                      <p className="font-bold text-gray-900 uppercase tracking-wider mb-2">Coordonnées Bancaires</p>
-                      <p>Banque : <span className="font-medium text-gray-800 tabular-nums">Amen Banque</span></p>
-                      <p className="font-mono mt-1 text-gray-900 text-sm tabular-nums mb-4">RIB : 07 123 456789 123456 78</p>
-                      
-                      <p className="text-[10px] text-gray-400">Le paiement est exigible à réception de la facture.</p>
-                      <p className="text-[10px] text-gray-400">Aucun escompte consenti pour règlement anticipé.</p>
-                    </div>
-
-                    {/* DROITE : Cachet et Signature */}
-                    <div className="w-1/2 flex flex-col items-end">
-                      <p className="font-bold text-gray-900 uppercase tracking-wider mb-2">Cachet et Signature</p>
-                      <div className="w-48 h-28 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50/50">
-                        <span className="text-gray-400 italic">Signature SECCC</span>
-                      </div>
-                    </div>
-
+                <td colSpan="5" className="pt-4">
+                  <div className="border-t-2 border-gray-900 pt-4 mt-2">
+                    <table className="nested-print-table text-xs text-gray-600">
+                      <tbody>
+                        <tr>
+                          {/* Banque */}
+                          <td className="w-1/2 align-top text-left pr-4">
+                            <p className="font-bold text-gray-900 uppercase tracking-wider mb-1">Coordonnées Bancaires</p>
+                            <p>Banque : <span className="font-medium text-gray-800">Amen Banque</span></p>
+                            <p className="font-mono mt-0.5 text-gray-900 text-xs tabular-nums mb-1">RIB : 07 123 456789 123456 78</p>
+                            <p className="text-[9px] text-gray-400 leading-tight">Le paiement est exigible à réception de la facture.</p>
+                          </td>
+                          {/* Signature */}
+                          <td className="w-1/2 align-top text-right flex flex-col items-end">
+                            <p className="font-bold text-gray-900 uppercase tracking-wider mb-1 text-right w-full">Cachet et Signature</p>
+                            <div className="w-44 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50/50">
+                              <span className="text-gray-400 italic text-[10px]">Signature & Cachet SECCC</span>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </td>
               </tr>
