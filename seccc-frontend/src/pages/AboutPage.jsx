@@ -52,7 +52,7 @@ const AboutPage = () => {
             <h2 className="text-3xl font-bold text-secondary mb-6">
               Notre Histoire
             </h2>
-            <p className="text-gray-600 mb-8 leading-relaxed">
+            <div className="text-gray-600 mb-8 leading-relaxed">
               Fondée en 2004, SECCC a rapidement évolué pour devenir l'un des meilleurs
               sociétés dans le secteur de la plomberie en Tunisie. Avec une équipe
               d'experts passionnés et une approche centrée sur le client, nous
@@ -62,7 +62,7 @@ const AboutPage = () => {
                <p style={{ fontSize: '0.875rem', color: '#000000' }}>🏢 Siège à Ariana, avec des projets à travers toute la Tunisie</p>
                <p style={{ fontSize: '0.875rem', color: '#000000' }}>🏗️ Plus de 20 ans d'experience </p>
               
-            </p>
+            </div>
 
             {/* Bouton de retour */}
             <Link
