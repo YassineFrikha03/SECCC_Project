@@ -17,6 +17,51 @@ const AdminPage = () => {
   // ⚡ NOUVEAU : État pour stocker le devis cliqué et afficher ses détails
   const [selectedDevis, setSelectedDevis] = useState(null);
 
+  // État pour le changement de mot de passe sécurisé
+  const [etapeMdp, setEtapeMdp] = useState(0); // 0=fermé, 1=loading, 2=pin, 3=nouveau mdp
+  const [pinInput, setPinInput] = useState('');
+  const [nouveauMdp, setNouveauMdp] = useState('');
+  const [erreurMdp, setErreurMdp] = useState('');
+
+  const demarrerChangementMotDePasse = async () => {
+    if(!window.confirm("Un code de sécurité va être envoyé à l'adresse email de l'administrateur. Continuer ?")) return;
+    
+    setEtapeMdp(1);
+    setErreurMdp('');
+    try {
+      await api.post('/admin/request-password-change');
+      setEtapeMdp(2);
+    } catch (err) {
+      setErreurMdp("Erreur lors de l'envoi de l'email. Vérifiez la connexion serveur.");
+      setEtapeMdp(2); // On reste sur 2 pour permettre l'annulation
+    }
+  };
+
+  const verifierPinEtChangerMdp = async (e) => {
+    e.preventDefault();
+    if (etapeMdp === 2) {
+      // Vérification du PIN
+      setErreurMdp('');
+      try {
+        await api.post('/admin/verify-password-change', { pin: pinInput });
+        setEtapeMdp(3); // PIN valide, on passe à l'étape du nouveau mot de passe
+      } catch (err) {
+        setErreurMdp(err.response?.data?.message || "Code incorrect.");
+      }
+    } else if (etapeMdp === 3) {
+      // Sauvegarde du nouveau mot de passe
+      if (nouveauMdp.trim() === '') {
+        setErreurMdp("Le mot de passe ne peut pas être vide.");
+        return;
+      }
+      localStorage.setItem('adminPassword', nouveauMdp.trim());
+      alert("✅ Le mot de passe a été mis à jour avec succès !");
+      setEtapeMdp(0);
+      setPinInput('');
+      setNouveauMdp('');
+    }
+  };
+
   // Chargement initial des devis
   useEffect(() => {
     const fetchDevis = async () => {
@@ -152,6 +197,14 @@ const AdminPage = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <button 
+            onClick={demarrerChangementMotDePasse}
+            className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-indigo-100 transition-colors flex items-center gap-2 border border-indigo-200"
+            title="Changer le mot de passe d'accès admin"
+          >
+            🔑 Changer Mot de Passe
+          </button>
+
           <button 
             onClick={() => {
               if (window.confirm("Voulez-vous réinitialiser toutes les empreintes faciales enregistrées ?")) {
@@ -397,7 +450,70 @@ const AdminPage = () => {
           </div>
         </div>
       )}
-      {/* ======================================================================================= */}
+      {/* ================= MODALE CHANGEMENT MOT DE PASSE ================= */}
+      {etapeMdp > 0 && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md text-center relative border border-slate-200">
+            <button 
+              onClick={() => { setEtapeMdp(0); setPinInput(''); setNouveauMdp(''); setErreurMdp(''); }} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 font-bold text-xl"
+            >
+              ✕
+            </button>
+            <h2 className="text-2xl font-black text-slate-900 mb-2">Sécurité Compte</h2>
+
+            {etapeMdp === 1 && (
+              <div className="py-8">
+                <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-slate-600 font-medium">Envoi du code de sécurité par email...</p>
+              </div>
+            )}
+
+            {etapeMdp === 2 && (
+              <form onSubmit={verifierPinEtChangerMdp} className="text-left mt-6">
+                <p className="text-sm text-slate-600 mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                  Un code à 6 chiffres a été envoyé à l'adresse email de l'administrateur. Entrez ce code pour continuer.
+                </p>
+                <input
+                  type="text"
+                  placeholder="Code à 6 chiffres"
+                  required
+                  autoFocus
+                  maxLength={6}
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-center text-2xl font-black tracking-widest focus:outline-none focus:border-indigo-500 mb-2"
+                />
+                {erreurMdp && <p className="text-red-500 text-xs font-bold mb-4">{erreurMdp}</p>}
+                <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-colors mt-4">
+                  Vérifier le code
+                </button>
+              </form>
+            )}
+
+            {etapeMdp === 3 && (
+              <form onSubmit={verifierPinEtChangerMdp} className="text-left mt-6">
+                <div className="w-16 h-16 mx-auto mb-4 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 text-2xl border border-emerald-100 shadow-sm">✓</div>
+                <p className="text-sm text-emerald-700 font-bold mb-4 text-center">Identité confirmée.</p>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nouveau mot de passe</label>
+                <input
+                  type="password"
+                  placeholder="Nouveau mot de passe"
+                  required
+                  autoFocus
+                  value={nouveauMdp}
+                  onChange={(e) => setNouveauMdp(e.target.value)}
+                  className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 mb-2 font-bold"
+                />
+                {erreurMdp && <p className="text-red-500 text-xs font-bold mb-4">{erreurMdp}</p>}
+                <button type="submit" className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition-colors mt-4">
+                  Sauvegarder et terminer
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

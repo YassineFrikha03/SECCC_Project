@@ -173,7 +173,8 @@ const AdminBarrier = ({ children }) => {
 
   const validerEtEnregistrerVisage = async (e) => {
     e.preventDefault();
-    if (password !== 'admin123') {
+    const currentPassword = localStorage.getItem('adminPassword') || 'admin123';
+    if (password !== currentPassword) {
       setErreur('❌ Mot de passe maître incorrect.');
       return;
     }
@@ -214,7 +215,8 @@ const AdminBarrier = ({ children }) => {
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
-    if (password === 'admin123') { 
+    const currentPassword = localStorage.getItem('adminPassword') || 'admin123';
+    if (password === currentPassword) { 
       sessionStorage.setItem("roleSECCC", "admin");
       fermerTout();
       window.location.href = '/admin-seccc'; 
