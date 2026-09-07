@@ -1,26 +1,33 @@
 const nodemailer = require('nodemailer');
-require('dotenv').config();
+// Conseil: require('dotenv').config(); min a7sen ta3melha mara wa7da fi server.js wala index.js mte3k
 
 const envoyerEmailConfirmation = async (devis) => {
     try {
+        // Configuration mrigla lel production (Render, etc.)
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true, // true pour le port 465
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
             }
         });
 
-        // On transforme le tableau de services en un beau texte propre
         const servicesDemandes = devis.servicesChoisis && devis.servicesChoisis.length > 0 
             ? devis.servicesChoisis.join(', ') 
             : 'Non spécifié';
 
-        // Message de l'email en HTML stylisé (Design moderne et professionnel)
         const mailOptions = {
-            from: `"SECCC Tunisie" <${process.env.EMAIL_USER}>`, // Expéditeur plus pro
+            from: `"SECCC Tunisie" <${process.env.EMAIL_USER}>`, 
+            replyTo: process.env.EMAIL_USER, // Bch el client ynajem yjaweb directement
             to: devis.email,
             subject: `Confirmation de votre demande de devis - SECCC`,
+            
+            // Version texte simple (Mawjouda bch t7asen deliverability w tba3ed 3al Spam)
+            text: `Bonjour ${devis.nom},\n\nNous vous confirmons la bonne réception de votre demande de devis pour les prestations suivantes : ${servicesDemandes}.\nUn conseiller technique vous contactera sous 24 à 48 heures au ${devis.telephone}.\n\nCordialement,\nL'équipe technique SECCC`,
+            
+            // Version HTML (Design mte3k)
             html: `
             <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                 
@@ -62,7 +69,7 @@ const envoyerEmailConfirmation = async (devis) => {
         
     } catch (error) {
         console.error("❌ Erreur d'envoi d'email de confirmation:", error);
-        throw error;
+        throw error; // Bch l'controller mte3k yfi9 biha w yracha3 erreur 500 lel frontend
     }
 };
 

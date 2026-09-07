@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import * as faceapi from 'face-api.js';
 
 const AdminBarrier = ({ children }) => {
-  const [etape, setEtape] = useState(0); // 0 = Caché, 1 = Scan Webcam, 2 = Mot de passe
+  const [etape, setEtape] = useState(0); // 0 = Caché, 1 = Scan Webcam, 2 = Mot de passe, 3 = Enregistrement Visage
   const [password, setPassword] = useState('');
   const [erreur, setErreur] = useState('');
   const [statusScan, setStatusScan] = useState('');
@@ -28,16 +28,13 @@ const AdminBarrier = ({ children }) => {
     chargerModelesAuDemarrage();
   }, []);
 
-  // 2. 🔄 NOUVEAU : ÉCOUTEUR DU SIGNAL SECRET (Plus de clavier !)
+  // 2. ÉCOUTEUR DU SIGNAL SECRET
   useEffect(() => {
     const handleSecretTrigger = () => {
-      // Si déjà connecté admin dans la session, on redirige directement
       if (sessionStorage.getItem("roleSECCC") === "admin") {
         navigate('/admin-seccc');
         return;
       }
-
-      // Sinon, on ouvre la modale et on lance la caméra
       setEtape(1);
       allumerCameraEtScanner();
     };
@@ -46,20 +43,23 @@ const AdminBarrier = ({ children }) => {
     return () => window.removeEventListener('open-seccc-login', handleSecretTrigger);
   }, [navigate, iaChargee]);
 
-  // 3. ALLUMAGE DE LA CAMÉRA
+  // 3. ALLUMAGE DE LA CAMÉRA ET BOUCLE DE SCAN
   const allumerCameraEtScanner = async () => {
     setErreur('');
     setStatusScan("Vérification des droits...");
 
-    const visageSauvegardeStr = localStorage.getItem('adminVisage');
-    if (!visageSauvegardeStr) {
-      setErreur("❌ Aucun Face ID configuré. Utilisez la console ou l'URL d'accès pour lier votre visage.");
-      setStatusScan("Échec.");
+    const visage1Str = localStorage.getItem('adminVisage1') || localStorage.getItem('adminVisage');
+    const visage2Str = localStorage.getItem('adminVisage2');
+
+    if (!visage1Str && !visage2Str) {
+      setErreur("❌ Aucun Face ID configuré.");
+      setStatusScan("Veuillez configurer un visage.");
+      // We will show a configuration button in the UI
       return;
     }
 
     if (!iaChargee) {
-      setErreur("❌ Les fichiers de l'IA chargent encore. Réessayez dans 3 secondes.");
+      setErreur("❌ L'IA charge encore. Réessayez dans quelques secondes.");
       setStatusScan("Veuillez patienter.");
       return;
     }
@@ -73,62 +73,150 @@ const AdminBarrier = ({ children }) => {
         await videoRef.current.play();
         setStatusScan("Analyse faciale en cours... Ne bougez pas.");
         
-        setTimeout(() => {
-          executerAnalyseFaciale(JSON.parse(visageSauvegardeStr));
-        }, 1500);
+        scanLoop(visage1Str, visage2Str);
       }
     } catch (err) {
       console.error("Erreur caméra :", err);
-      setErreur("❌ Impossible d'accéder à la caméra ou flux bloqué.");
+      setErreur("❌ Impossible d'accéder à la caméra.");
       setStatusScan("Erreur.");
     }
   };
 
-  // 4. ANALYSE ET COMPARAISON DU VISAGE
-  const executerAnalyseFaciale = async (visageSauvegardeTableau) => {
-    if (!videoRef.current || !videoRef.current.srcObject) return;
+  const scanLoop = (visage1Str, visage2Str) => {
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    const interval = setInterval(async () => {
+      if (!videoRef.current || !videoRef.current.srcObject) {
+        clearInterval(interval);
+        return;
+      }
+      
+      attempts++;
+      
+      try {
+        const detectionActuelle = await faceapi.detectSingleFace(videoRef.current)
+                                               .withFaceLandmarks()
+                                               .withFaceDescriptor();
+                                               
+        if (detectionActuelle) {
+          clearInterval(interval);
+          executerComparaison(detectionActuelle, visage1Str, visage2Str);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          couperCamera();
+          setErreur("❌ Visage introuvable après plusieurs tentatives. Alignez-vous bien face au capteur.");
+          setStatusScan("Échec.");
+        }
+      } catch (err) {
+        clearInterval(interval);
+        couperCamera();
+        setErreur("❌ Erreur lors de l'analyse.");
+        setStatusScan("Erreur.");
+      }
+    }, 1000); // Check every second
+    
+    videoRef.current.scanInterval = interval;
+  };
+
+  const executerComparaison = (detectionActuelle, visage1Str, visage2Str) => {
+    couperCamera();
+    
+    let distance1 = Infinity;
+    let distance2 = Infinity;
+
+    if (visage1Str) {
+      try {
+        const desc1 = new Float32Array(JSON.parse(visage1Str));
+        distance1 = faceapi.euclideanDistance(detectionActuelle.descriptor, desc1);
+      } catch (e) { console.error(e); }
+    }
+    
+    if (visage2Str) {
+      try {
+        const desc2 = new Float32Array(JSON.parse(visage2Str));
+        distance2 = faceapi.euclideanDistance(detectionActuelle.descriptor, desc2);
+      } catch (e) { console.error(e); }
+    }
+
+    const distanceMin = Math.min(distance1, distance2);
+
+    if (distanceMin < 0.55) { // Un peu plus strict/fiable
+      setStatusScan("✅ Identité confirmée.");
+      setEtape(2); 
+    } else {
+      const ressemblance = Math.max(0, Math.round((1 - distanceMin) * 100));
+      setErreur(`❌ Accès interdit (${ressemblance}% de correspondance).`);
+      setStatusScan("Échec.");
+    }
+  };
+
+  // 5. ENREGISTREMENT D'UN NOUVEAU VISAGE (ETAPE 3)
+  const demarrerEnregistrement = async () => {
+    setEtape(3);
+    setErreur('');
+    setPassword('');
+    setStatusScan("Démarrage de la caméra pour l'enregistrement...");
 
     try {
-      const detectionActuelle = await faceapi.detectSingleFace(videoRef.current)
-                                             .withFaceLandmarks()
-                                             .withFaceDescriptor();
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        setStatusScan("Placez votre visage au centre...");
+      }
+    } catch (err) {
+      setErreur("❌ Impossible d'accéder à la caméra.");
+      setStatusScan("Erreur.");
+    }
+  };
 
-      couperCamera();
+  const validerEtEnregistrerVisage = async (e) => {
+    e.preventDefault();
+    if (password !== 'admin123') {
+      setErreur('❌ Mot de passe maître incorrect.');
+      return;
+    }
 
-      if (!detectionActuelle) {
-        setErreur("❌ Visage non détecté. Alignez-vous bien face au capteur.");
-        setStatusScan("Échec.");
+    if (!videoRef.current || !videoRef.current.srcObject) return;
+
+    setStatusScan("Capture en cours...");
+    try {
+      const detection = await faceapi.detectSingleFace(videoRef.current)
+                                     .withFaceLandmarks()
+                                     .withFaceDescriptor();
+      if (!detection) {
+        setErreur("❌ Aucun visage détecté. Rapprochez-vous de la caméra.");
+        setStatusScan("Échec de la capture.");
         return;
       }
 
-      const descripteurSauvegarde = new Float32Array(visageSauvegardeTableau);
-      const distance = faceapi.euclideanDistance(detectionActuelle.descriptor, descripteurSauvegarde);
-
-      console.log("📊 [SECCC] Distance de correspondance faciale :", distance);
-
-      if (distance < 0.6) {
-        setStatusScan("✅ Identité confirmée.");
-        setEtape(2); 
+      // Save as visage 1 if empty, otherwise visage 2
+      const visage1 = localStorage.getItem('adminVisage1') || localStorage.getItem('adminVisage');
+      if (!visage1) {
+        localStorage.setItem('adminVisage1', JSON.stringify(Array.from(detection.descriptor)));
       } else {
-        const pourcentageRessemblance = Math.round((1 - distance) * 100);
-        setErreur(`❌ Accès interdit : Correspondance insuffisante (${pourcentageRessemblance}% de ressemblance).`);
-        setStatusScan("Échec.");
+        localStorage.setItem('adminVisage2', JSON.stringify(Array.from(detection.descriptor)));
       }
-    } catch (err) {
-      console.error(err);
-      setErreur("❌ Erreur lors du traitement de l'image.");
-      setStatusScan("Erreur.");
+
       couperCamera();
+      setStatusScan("✅ Visage enregistré avec succès !");
+      setErreur('');
+      setTimeout(() => {
+        setEtape(1);
+        allumerCameraEtScanner();
+      }, 2000);
+
+    } catch (err) {
+      setErreur("❌ Erreur lors de l'enregistrement.");
     }
   };
 
-  // 5. ENVOI DU MOT DE PASSE MAÎTRE
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     if (password === 'admin123') { 
       sessionStorage.setItem("roleSECCC", "admin");
-      setEtape(0);
-      setPassword('');
+      fermerTout();
       window.location.href = '/admin-seccc'; 
     } else {
       setErreur('❌ Mot de passe incorrect.');
@@ -137,8 +225,14 @@ const AdminBarrier = ({ children }) => {
   };
 
   const couperCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+    if (videoRef.current) {
+      if (videoRef.current.scanInterval) {
+        clearInterval(videoRef.current.scanInterval);
+      }
+      if (videoRef.current.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+      }
     }
   };
 
@@ -162,6 +256,7 @@ const AdminBarrier = ({ children }) => {
               ✕
             </button>
 
+            {/* ETAPE 1 : SCAN */}
             {etape === 1 && (
               <div>
                 <h2 className="text-xl font-black text-slate-900 mb-1 uppercase tracking-wide">Authentification Biométrique</h2>
@@ -174,10 +269,25 @@ const AdminBarrier = ({ children }) => {
                   {!erreur && <div className="absolute top-0 left-0 w-full h-1 bg-red-500 shadow-[0_0_15px_4px_rgba(239,68,68,0.7)] animate-scan" style={{ animation: 'scan 2s linear infinite' }} />}
                 </div>
 
-                {erreur && <p className="text-red-500 text-xs font-bold leading-relaxed bg-red-50 p-3 rounded-xl border border-red-100">{erreur}</p>}
+                {erreur && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-red-500 text-xs font-bold leading-relaxed bg-red-50 p-3 rounded-xl border border-red-100">{erreur}</p>
+                    
+                    {erreur.includes("Aucun Face ID configuré") ? (
+                      <button onClick={demarrerEnregistrement} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-widest rounded-xl shadow-lg transition-colors">
+                        📷 Configurer un visage
+                      </button>
+                    ) : (
+                      <button onClick={allumerCameraEtScanner} className="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold uppercase tracking-widest rounded-xl shadow-lg transition-colors">
+                        🔄 Réessayer
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
+            {/* ETAPE 2 : MOT DE PASSE APRÈS SCAN */}
             {etape === 2 && (
               <form onSubmit={handlePasswordSubmit}>
                 <div className="w-16 h-16 mx-auto mb-4 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 text-2xl border border-emerald-100 shadow-sm">✓</div>
@@ -191,13 +301,44 @@ const AdminBarrier = ({ children }) => {
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setErreur(''); }}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-xl tracking-widest font-bold focus:outline-none focus:border-red-500 focus:bg-white mb-4"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-xl tracking-widest font-bold focus:outline-none focus:border-emerald-500 focus:bg-white mb-4"
                 />
                 
                 {erreur && <p className="text-red-500 text-xs font-bold mb-4 bg-red-50 p-2 rounded-lg border border-red-100">{erreur}</p>}
 
-                <button type="submit" className="w-full py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-widest rounded-xl shadow-lg">
+                <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-widest rounded-xl shadow-lg">
                   Confirmer l'accès
+                </button>
+              </form>
+            )}
+
+            {/* ETAPE 3 : ENREGISTREMENT NOUVEAU VISAGE */}
+            {etape === 3 && (
+              <form onSubmit={validerEtEnregistrerVisage}>
+                <h2 className="text-xl font-black text-indigo-600 mb-1 uppercase tracking-wide">Nouveau Visage</h2>
+                <p className="text-xs text-slate-500 mb-4 font-medium">{statusScan}</p>
+
+                <div className="relative w-full h-40 bg-black rounded-xl overflow-hidden mb-4 border-2 border-indigo-200">
+                  <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover transform scale-x-[-1]" />
+                </div>
+
+                <p className="text-xs text-slate-400 mb-2 font-medium">Mot de passe maître requis pour l'ajout :</p>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setErreur(''); }}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-lg tracking-widest font-bold focus:outline-none focus:border-indigo-500 focus:bg-white mb-4"
+                />
+
+                {erreur && <p className="text-red-500 text-xs font-bold mb-4 bg-red-50 p-2 rounded-lg border border-red-100">{erreur}</p>}
+
+                <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-widest rounded-xl shadow-lg">
+                  💾 Sauvegarder ce visage
+                </button>
+                <button type="button" onClick={() => setEtape(1)} className="w-full mt-2 py-2 text-slate-500 hover:text-slate-700 text-xs font-bold uppercase">
+                  Annuler
                 </button>
               </form>
             )}
@@ -206,7 +347,7 @@ const AdminBarrier = ({ children }) => {
         </div>
       )}
 
-      {etape === 1 && (
+      {etape > 0 && (
         <style>{`@keyframes scan { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }`}</style>
       )}
     </>

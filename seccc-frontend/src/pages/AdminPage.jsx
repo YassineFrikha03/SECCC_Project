@@ -114,7 +114,7 @@ const AdminPage = () => {
                                      .withFaceDescriptor();
       if (detection) {
         const empreinte = Array.from(detection.descriptor);
-        localStorage.setItem('adminVisage', JSON.stringify(empreinte));
+        localStorage.setItem('adminVisage1', JSON.stringify(empreinte));
         setStatusScan("✅ Visage enregistré avec succès ! Vous pouvez fermer cette fenêtre.");
         arreterCamera();
       } else {
@@ -153,9 +153,24 @@ const AdminPage = () => {
         
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <button 
+            onClick={() => {
+              if (window.confirm("Voulez-vous réinitialiser toutes les empreintes faciales enregistrées ?")) {
+                localStorage.removeItem('adminVisage');
+                localStorage.removeItem('adminVisage1');
+                localStorage.removeItem('adminVisage2');
+                alert("✅ Face ID réinitialisés ! Vous devrez vous réenregistrer à la prochaine connexion.");
+              }
+            }}
+            className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-red-100 transition-colors flex items-center gap-2 border border-red-200"
+            title="Effacer les visages enregistrés"
+          >
+            🗑️ Réinitialiser Face ID
+          </button>
+
+          <button 
             onClick={ouvrirConfigurationFaceID}
             className="bg-slate-800 text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-slate-900 transition-colors flex items-center gap-2 border border-slate-700"
-            title="Enregistrer votre visage pour la touche P"
+            title="Enregistrer votre visage"
           >
             <span className="text-lg">🧑‍💻</span> Configurer Face ID
           </button>

@@ -12,7 +12,11 @@ const FacturePage = () => {
     e.preventDefault();
     if (!nouvelArticle.description || nouvelArticle.prixUnitaire === '') return;
 
-    const prixFormatte = Number(nouvelArticle.prixUnitaire);
+    const prixStr = String(nouvelArticle.prixUnitaire).replace(',', '.');
+    const prixFormatte = Number(prixStr);
+
+    if (isNaN(prixFormatte)) return;
+
     const articleComplet = {
       ...nouvelArticle,
       prixUnitaire: prixFormatte,
@@ -183,8 +187,9 @@ const FacturePage = () => {
           </button>
         </div>
 
-        {/* FACTURE VISUELLE */}
-        <div className="bg-white shadow-2xl print-area w-[210mm] min-h-[297mm] mx-auto p-8 sm:p-12 text-gray-900 relative">
+        {/* FACTURE VISUELLE (Enveloppée pour scroller sur mobile) */}
+        <div className="w-full xl:w-2/3 overflow-x-auto pb-10 flex justify-center print:block print:w-full print:overflow-visible print:pb-0">
+          <div className="bg-white shadow-2xl print-area w-[210mm] min-w-[210mm] min-h-[297mm] mx-auto p-8 sm:p-12 text-gray-900 relative">
           
           <img 
             src={logo} 
@@ -291,33 +296,35 @@ const FacturePage = () => {
               ))}
             </tbody>
 
-            {/* LES TOTAUX (Suivent uniquement la fin des articles) */}
-            <tbody className="keep-together border-none">
-              <tr>
-                <td colSpan="2" className="border-none"></td>
-                <td className="py-2 px-2 text-gray-500 text-sm border-b border-gray-100">Total HT</td>
-                <td className="py-2 px-2 text-right font-medium text-gray-900 text-sm tabular-nums border-b border-gray-100">{formatTND(totalHT)}</td>
-                <td className="print:hidden border-none"></td>
-              </tr>
-              <tr>
-                <td colSpan="2" className="border-none"></td>
-                <td className="py-2 px-2 text-gray-500 text-sm border-b border-gray-100">TVA (19%)</td>
-                <td className="py-2 px-2 text-right text-gray-900 text-sm tabular-nums border-b border-gray-100">{formatTND(montantTVA)}</td>
-                <td className="print:hidden border-none"></td>
-              </tr>
-              {timbreActif && (
-                <tr>
-                  <td colSpan="2" className="border-none"></td>
-                  <td className="py-2 px-2 text-gray-500 text-sm border-b border-gray-100">Timbre Fiscal</td>
-                  <td className="py-2 px-2 text-right text-gray-800 text-sm tabular-nums border-b border-gray-100">{formatTND(1.000)}</td>
-                  <td className="print:hidden border-none"></td>
-                </tr>
-              )}
-              <tr className="border-t border-gray-900">
-                <td colSpan="2" className="border-none"></td>
-                <td className="py-3 px-2 font-bold text-gray-900 text-sm uppercase tracking-widest">Total TTC</td>
-                <td className="py-3 px-2 text-right font-bold text-lg text-red-600 tabular-nums">{formatTND(totalTTC)}</td>
-                <td className="print:hidden border-none"></td>
+            {/* LES TOTAUX (Garantis de rester groupés sur la même page) */}
+            <tbody className="border-none keep-together">
+              <tr className="keep-together" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                <td colSpan="5" className="p-0 border-none pt-4">
+                  <div className="flex justify-end w-full">
+                    <table className="w-1/2 nested-print-table">
+                      <tbody>
+                        <tr>
+                          <td className="py-2 px-2 text-gray-500 text-sm border-b border-gray-100 w-1/2">Total HT</td>
+                          <td className="py-2 px-2 text-right font-medium text-gray-900 text-sm tabular-nums border-b border-gray-100">{formatTND(totalHT)}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 px-2 text-gray-500 text-sm border-b border-gray-100">TVA (19%)</td>
+                          <td className="py-2 px-2 text-right text-gray-900 text-sm tabular-nums border-b border-gray-100">{formatTND(montantTVA)}</td>
+                        </tr>
+                        {timbreActif && (
+                          <tr>
+                            <td className="py-2 px-2 text-gray-500 text-sm border-b border-gray-100">Timbre Fiscal</td>
+                            <td className="py-2 px-2 text-right text-gray-800 text-sm tabular-nums border-b border-gray-100">{formatTND(1.000)}</td>
+                          </tr>
+                        )}
+                        <tr className="border-t-2 border-gray-900">
+                          <td className="py-3 px-2 font-black text-gray-900 text-sm uppercase tracking-widest">Total TTC</td>
+                          <td className="py-3 px-2 text-right font-black text-lg text-red-600 tabular-nums">{formatTND(totalTTC)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </td>
               </tr>
             </tbody>
 
@@ -354,6 +361,7 @@ const FacturePage = () => {
             </tfoot>
 
           </table>
+        </div>
         </div>
       </div>
     </div>
