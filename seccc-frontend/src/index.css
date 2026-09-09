@@ -1,12 +1,22 @@
 @import "tailwindcss";
 
-/* Utiliser @theme permet à Tailwind de créer bg-primary, text-secondary, etc. */
 @theme {
-  --color-primary: #d32f2f;
-  --color-secondary: #1a237e;
-  --color-cta-plumbing: ##ffffff;
+  --color-primary: #e11d48; /* Red 600 plus vif */
+  --color-secondary: #0f172a; /* Slate 900 plus profond */
 }
 
 body {
   background-color: #f8fafc;
+  font-family: 'Outfit', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Animations personnalisées globales */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

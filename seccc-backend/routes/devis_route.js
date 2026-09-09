@@ -23,14 +23,15 @@ router.post('/', async (req, res) => {
 
         // Étape 2 : Envoi de l'email de confirmation (Isolé dans un try/catch)
         try {
-            await envoyerEmailConfirmation(devisEnregistre);
-            console.log("📧 Email de confirmation envoyé au client !");
+            envoyerEmailConfirmation(devisEnregistre).catch(err => {
+                console.error("⚠️ Le devis est enregistré, mais l'email a échoué en arrière-plan :", err.message);
+            });
+            console.log("📧 Processus d'envoi d'email lancé en arrière-plan !");
         } catch (emailError) {
-            console.error("⚠️ Le devis est enregistré, mais l'email a échoué :", emailError.message);
-            // On ne bloque pas la réponse à React si seul l'email plante
+            console.error("⚠️ Erreur au lancement de l'email :", emailError.message);
         }
 
-        // On répond un succès à React (201)
+        // On répond un succès à React (201) IMMÉDIATEMENT sans attendre l'email
         res.status(201).json({ message: "Devis créé avec succès !", devis: devisEnregistre });
 
     } catch (error) {

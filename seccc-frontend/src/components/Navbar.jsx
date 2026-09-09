@@ -3,34 +3,34 @@ import { Link } from "react-router-dom";
 import logo from "../assets/logo.png";
 
 const Navbar = ({ user }) => {
-  const [isOpen, setIsOpen] = useState(false); // Pour le menu déroulant Desktop
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Pour le menu mobile global
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const fermerMenuMobile = () => setIsMobileMenuOpen(false);
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-white shadow-md border-b-4 border-gray-100 z-50 print:hidden">
+    <nav className="fixed top-0 left-0 w-full bg-white/80 backdrop-blur-xl shadow-lg shadow-slate-900/5 border-b border-white/20 z-50 transition-all duration-300 print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-24">
           
           {/* 1. Section Logo */}
-          <div className="flex-shrink-0 flex items-center cursor-pointer">
+          <div className="flex-shrink-0 flex items-center cursor-pointer group">
             <Link to="/" className="flex items-center" onClick={fermerMenuMobile}>
               <img
                 src={logo}
                 alt="Logo SECCC"
-                className="h-24 w-auto object-contain"
+                className="h-20 w-auto object-contain transition-transform duration-500 group-hover:scale-105"
               />
             </Link>
           </div>
 
           {/* ======================================================== */}
-          {/* BOUTON HAMBURGER (Visible uniquement sur mobile) */}
+          {/* BOUTON HAMBURGER (Mobile) */}
           {/* ======================================================== */}
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-secondary hover:text-primary focus:outline-none"
+              className="text-slate-800 hover:text-red-600 focus:outline-none transition-colors p-2 rounded-full hover:bg-red-50"
             >
               <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {isMobileMenuOpen ? (
@@ -43,9 +43,9 @@ const Navbar = ({ user }) => {
           </div>
 
           {/* 2. Section Liens de navigation (DESKTOP) */}
-          <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
-            <Link to="/" className="text-secondary hover:text-primary font-bold text-sm tracking-wider transition-colors">ACCUEIL</Link>
-            <Link to="/about" className="text-secondary hover:text-primary font-bold text-sm tracking-wider transition-colors">À PROPOS</Link>
+          <div className="hidden md:flex items-center space-x-1 lg:space-x-2">
+            <Link to="/" className="px-4 py-2 text-slate-700 hover:text-red-600 font-bold text-xs lg:text-sm tracking-widest transition-all rounded-full hover:bg-red-50">ACCUEIL</Link>
+            <Link to="/about" className="px-4 py-2 text-slate-700 hover:text-red-600 font-bold text-xs lg:text-sm tracking-widest transition-all rounded-full hover:bg-red-50">À PROPOS</Link>
 
             <div 
               className="relative group h-24 flex items-center"
@@ -54,46 +54,50 @@ const Navbar = ({ user }) => {
             >
               <Link
                 to="/services"
-                className={`flex items-center gap-2 font-bold text-sm tracking-wider transition-colors h-full px-4 ${
-                  isOpen ? "bg-secondary text-white" : "text-secondary hover:text-primary"
+                className={`flex items-center gap-2 font-bold text-xs lg:text-sm tracking-widest transition-all px-4 py-2 rounded-full ${
+                  isOpen ? "bg-red-50 text-red-600" : "text-slate-700 hover:text-red-600 hover:bg-red-50"
                 }`}
               >
-                DOMAINES D'ACTIVITÉ
-                <svg className={`w-4 h-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                DOMAINES
+                <svg className={`w-4 h-4 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path>
                 </svg>
               </Link>
 
               {isOpen && (
-                <div className="absolute top-24 left-0 w-64 bg-white shadow-xl border-t-4 border-primary animate-in fade-in slide-in-from-top-2 duration-200">
-                  <Link to="/services/plomberie-sanitaire" className="block px-6 py-4 text-secondary hover:bg-gray-50 hover:text-primary font-bold text-xs border-b border-gray-100 transition-colors">Plomberie Sanitaire</Link>
-                  <Link to="/services/chauffage-central" className="block px-6 py-4 text-secondary hover:bg-gray-50 hover:text-primary font-bold text-xs transition-colors">Chauffage Central</Link>
-                  <Link to="/services/Climatisation" className="block px-6 py-4 text-secondary hover:bg-gray-50 hover:text-primary font-bold text-xs border-t border-gray-100 transition-colors">Climatisation & HVAC</Link>
+                <div className="absolute top-[80px] left-0 w-64 bg-white/95 backdrop-blur-xl shadow-2xl rounded-2xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+                  <div className="h-1 w-full bg-gradient-to-r from-red-600 to-red-400"></div>
+                  <Link to="/services/plomberie-sanitaire" className="block px-6 py-4 text-slate-700 hover:bg-red-50 hover:text-red-600 font-bold text-xs border-b border-slate-50 transition-colors">💧 Plomberie Sanitaire</Link>
+                  <Link to="/services/chauffage-central" className="block px-6 py-4 text-slate-700 hover:bg-red-50 hover:text-red-600 font-bold text-xs transition-colors">🔥 Chauffage Central</Link>
+                  <Link to="/services/Climatisation" className="block px-6 py-4 text-slate-700 hover:bg-red-50 hover:text-red-600 font-bold text-xs border-t border-slate-50 transition-colors">❄️ Climatisation & HVAC</Link>
                 </div>
               )}
             </div>
 
-            <Link to="/realisations" className="text-secondary hover:text-primary font-bold text-sm tracking-wider transition-colors">NOS REALISATIONS</Link>
+            <Link to="/realisations" className="px-4 py-2 text-slate-700 hover:text-red-600 font-bold text-xs lg:text-sm tracking-widest transition-all rounded-full hover:bg-red-50">RÉALISATIONS</Link>
 
             {user && user.role === "admin" && (
-              <div className="flex items-center gap-4 border-l-2 pl-6 lg:pl-8 border-gray-200">
-                <Link to="/admin-seccc" className="text-red-600 hover:text-red-800 font-bold text-sm tracking-wider transition-colors">ESPACE ADMIN</Link>
+              <div className="flex items-center gap-2 border-l-2 pl-4 ml-2 border-slate-200">
+                <Link to="/admin-seccc" className="px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-bold text-xs tracking-widest transition-colors shadow-sm">ADMIN</Link>
                 <button
                   onClick={() => {
                     sessionStorage.removeItem('roleSECCC');
                     window.location.href = "/";
                   }}
-                  className="text-gray-400 hover:text-gray-700 font-bold text-xs uppercase tracking-wider transition-colors"
-                  title="Quitter le mode administrateur"
+                  className="px-3 py-1.5 text-slate-400 hover:text-slate-700 font-bold text-[10px] uppercase tracking-widest transition-colors"
+                  title="Déconnexion"
                 >
-                  Déconnexion
+                  Quitter
                 </button>
               </div>
             )}
           </div>
 
-          <div className="hidden md:flex items-center">
-            <Link to="/devis" className="bg-primary hover:bg-red-700 text-white font-bold py-3 px-6 text-sm tracking-widest transition-colors shadow-sm">DEMANDE DE DEVIS</Link>
+          <div className="hidden md:flex items-center ml-4">
+            <Link to="/devis" className="relative group overflow-hidden bg-gradient-to-r from-red-600 to-red-500 text-white font-bold py-3 px-6 rounded-xl text-xs tracking-widest transition-all shadow-lg shadow-red-500/30 hover:shadow-red-500/50 hover:-translate-y-0.5">
+              <div className="absolute inset-0 w-full h-full bg-white/20 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+              <span>DEMANDE DE DEVIS</span>
+            </Link>
           </div>
         </div>
       </div>
@@ -101,43 +105,40 @@ const Navbar = ({ user }) => {
       {/* ======================================================== */}
       {/* MENU MOBILE DÉROULANT */}
       {/* ======================================================== */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 shadow-xl absolute w-full left-0 animate-in slide-in-from-top-2">
-          <div className="px-4 pt-2 pb-6 space-y-1">
-            <Link to="/" onClick={fermerMenuMobile} className="block px-3 py-4 text-base font-bold text-secondary border-b border-gray-50">ACCUEIL</Link>
-            <Link to="/about" onClick={fermerMenuMobile} className="block px-3 py-4 text-base font-bold text-secondary border-b border-gray-50">À PROPOS</Link>
-            
-            {/* Rubrique Domaines avec sous-liens indentés */}
-            <div className="block px-3 py-4 text-base font-bold text-secondary border-b border-gray-50 bg-gray-50">
-              DOMAINES D'ACTIVITÉ
-              <div className="mt-2 pl-4 space-y-2 border-l-2 border-primary ml-2">
-                <Link to="/services/plomberie-sanitaire" onClick={fermerMenuMobile} className="block py-2 text-sm text-gray-600 hover:text-primary">Plomberie Sanitaire</Link>
-                <Link to="/services/chauffage-central" onClick={fermerMenuMobile} className="block py-2 text-sm text-gray-600 hover:text-primary">Chauffage Central</Link>
-                <Link to="/services/Climatisation" onClick={fermerMenuMobile} className="block py-2 text-sm text-gray-600 hover:text-primary">Climatisation & HVAC</Link>
-              </div>
+      <div className={`md:hidden absolute w-full left-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 shadow-2xl transition-all duration-300 overflow-hidden ${isMobileMenuOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="px-4 pt-4 pb-8 space-y-2">
+          <Link to="/" onClick={fermerMenuMobile} className="block px-4 py-4 text-sm font-black text-slate-800 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">ACCUEIL</Link>
+          <Link to="/about" onClick={fermerMenuMobile} className="block px-4 py-4 text-sm font-black text-slate-800 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">À PROPOS</Link>
+          
+          <div className="block px-4 py-4 text-sm font-black text-slate-800 bg-slate-50 rounded-xl">
+            DOMAINES D'ACTIVITÉ
+            <div className="mt-3 pl-4 space-y-2 border-l-2 border-red-500 ml-2">
+              <Link to="/services/plomberie-sanitaire" onClick={fermerMenuMobile} className="block py-2 text-xs font-bold text-slate-600 hover:text-red-600">💧 Plomberie Sanitaire</Link>
+              <Link to="/services/chauffage-central" onClick={fermerMenuMobile} className="block py-2 text-xs font-bold text-slate-600 hover:text-red-600">🔥 Chauffage Central</Link>
+              <Link to="/services/Climatisation" onClick={fermerMenuMobile} className="block py-2 text-xs font-bold text-slate-600 hover:text-red-600">❄️ Climatisation & HVAC</Link>
             </div>
-            
-            <Link to="/realisations" onClick={fermerMenuMobile} className="block px-3 py-4 text-base font-bold text-secondary border-b border-gray-50">NOS RÉALISATIONS</Link>
-            
-            <Link to="/devis" onClick={fermerMenuMobile} className="block px-3 py-4 text-base font-bold text-primary border-b border-gray-50">📝 DEMANDE DE DEVIS</Link>
-
-            {user && user.role === "admin" && (
-              <div className="bg-red-50 mt-4 rounded-lg p-2">
-                <Link to="/admin-seccc" onClick={fermerMenuMobile} className="block px-3 py-3 text-base font-bold text-red-600 text-center">ESPACE ADMIN</Link>
-                <button
-                  onClick={() => {
-                    sessionStorage.removeItem('roleSECCC');
-                    window.location.href = "/";
-                  }}
-                  className="w-full text-center text-red-800 font-bold text-xs uppercase py-2 mt-1"
-                >
-                  Déconnexion
-                </button>
-              </div>
-            )}
           </div>
+          
+          <Link to="/realisations" onClick={fermerMenuMobile} className="block px-4 py-4 text-sm font-black text-slate-800 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">NOS RÉALISATIONS</Link>
+          
+          <Link to="/devis" onClick={fermerMenuMobile} className="block mt-4 px-4 py-4 text-sm font-black text-white bg-gradient-to-r from-red-600 to-red-500 rounded-xl text-center shadow-lg shadow-red-500/30">📝 DEMANDE DE DEVIS</Link>
+
+          {user && user.role === "admin" && (
+            <div className="bg-slate-900 mt-6 rounded-xl p-3 border border-slate-800">
+              <Link to="/admin-seccc" onClick={fermerMenuMobile} className="block px-4 py-3 text-sm font-black text-white text-center">ESPACE ADMIN</Link>
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem('roleSECCC');
+                  window.location.href = "/";
+                }}
+                className="w-full text-center text-slate-400 hover:text-white font-bold text-[10px] uppercase tracking-widest py-2 mt-1 transition-colors"
+              >
+                Déconnexion
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </nav>
   );
 };
