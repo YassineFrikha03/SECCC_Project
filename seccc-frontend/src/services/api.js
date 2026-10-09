@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://seccc-project.onrender.com/api', // L'adresse de ton backend Node.js (Production sur Render)
+  baseURL: import.meta.env.VITE_API_URL || 'https://seccc-project.onrender.com/api', // L'adresse de ton backend Node.js
 });
 
 export default api;

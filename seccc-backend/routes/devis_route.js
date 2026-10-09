@@ -21,18 +21,18 @@ router.post('/', async (req, res) => {
         
         console.log("✅ Devis sauvegardé avec succès dans la base de données !");
 
-        // Étape 2 : Envoi de l'email de confirmation (Isolé dans un try/catch)
+        // Étape 2 : Envoi de l'email de confirmation (Attendre la fin)
         try {
-            envoyerEmailConfirmation(devisEnregistre).catch(err => {
-                console.error("⚠️ Le devis est enregistré, mais l'email a échoué en arrière-plan :", err.message);
-            });
-            console.log("📧 Processus d'envoi d'email lancé en arrière-plan !");
+            await envoyerEmailConfirmation(devisEnregistre);
+            console.log("📧 Emails (Client + Admin) envoyés avec succès !");
+            
+            // On répond un succès à React (201) APRES l'envoi de l'email
+            res.status(201).json({ message: "Devis créé avec succès et email envoyé !", devis: devisEnregistre });
         } catch (emailError) {
-            console.error("⚠️ Erreur au lancement de l'email :", emailError.message);
+            console.error("⚠️ Erreur lors de l'envoi de l'email :", emailError.message);
+            // On peut quand même répondre un succès car le devis est enregistré en BDD, mais on prévient que l'email a échoué
+            res.status(201).json({ message: "Devis créé, mais l'envoi de l'email de confirmation a échoué. Veuillez vérifier vos courriers indésirables ou nous contacter.", devis: devisEnregistre });
         }
-
-        // On répond un succès à React (201) IMMÉDIATEMENT sans attendre l'email
-        res.status(201).json({ message: "Devis créé avec succès !", devis: devisEnregistre });
 
     } catch (error) {
         // C'est ICI que s'affiche la vraie erreur Mongoose si la donnée est refusée
