@@ -93,13 +93,6 @@ const AdminBarrier = ({ children }) => {
     const visage1Str = localStorage.getItem('adminVisage1') || localStorage.getItem('adminVisage');
     const visage2Str = localStorage.getItem('adminVisage2');
 
-    if (!visage1Str && !visage2Str) {
-      setErreur("❌ Aucun Face ID configuré.");
-      setStatusScan("Veuillez configurer un visage.");
-      // We will show a configuration button in the UI
-      return;
-    }
-
     if (!iaChargee) {
       setErreur("❌ L'IA charge encore. Réessayez dans quelques secondes.");
       setStatusScan("Veuillez patienter.");
@@ -164,31 +157,13 @@ const AdminBarrier = ({ children }) => {
   const executerComparaison = (detectionActuelle, visage1Str, visage2Str) => {
     couperCamera();
     
-    let distance1 = Infinity;
-    let distance2 = Infinity;
-
-    if (visage1Str) {
-      try {
-        const desc1 = new Float32Array(JSON.parse(visage1Str));
-        distance1 = faceapi.euclideanDistance(detectionActuelle.descriptor, desc1);
-      } catch (e) { console.error(e); }
-    }
-    
-    if (visage2Str) {
-      try {
-        const desc2 = new Float32Array(JSON.parse(visage2Str));
-        distance2 = faceapi.euclideanDistance(detectionActuelle.descriptor, desc2);
-      } catch (e) { console.error(e); }
-    }
-
-    const distanceMin = Math.min(distance1, distance2);
-
-    if (distanceMin < 0.6) { // Tolérance ajustée à 0.6 (standard) pour faciliter la connexion
-      setStatusScan("✅ Identité confirmée.");
+    // Sur demande: on ignore le pourcentage de ressemblance.
+    // Dès qu'un visage humain est détecté, on passe à l'étape du mot de passe.
+    if (detectionActuelle) {
+      setStatusScan("✅ Visage humain détecté.");
       setEtape(2); 
     } else {
-      const ressemblance = Math.max(0, Math.round((1 - distanceMin) * 100));
-      setErreur(`❌ Accès interdit (${ressemblance}% de correspondance). Essayez d'améliorer l'éclairage.`);
+      setErreur(`❌ Aucun visage détecté.`);
       setStatusScan("Échec.");
     }
   };
