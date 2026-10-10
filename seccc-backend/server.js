@@ -23,7 +23,17 @@ app.use((req, res, next) => {
 });
 
 // 2. Middlewares de base
-app.use(cors());
+const corsOptions = {
+    origin: function (origin, callback) {
+        // En production sur Render, vous pouvez spécifier l'URL exacte du frontend dans .env
+        // Sinon, on accepte temporairement toutes les requêtes pour éviter les blocages CORS avec Netlify
+        callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // 3. DÉTECTEUR D'ERREUR JSON (C'est lui qui causait votre 400 fantôme)
