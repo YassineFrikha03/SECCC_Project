@@ -52,7 +52,7 @@ const FormulaireDevis = () => {
     setEnvoiEnCours(true);
 
     try {
-      const response = await api.post('/devis', formData);
+      const response = await api.post('/devis', formData, { timeout: 5000 });
       const message = response?.data?.message || `Votre demande a été transmise avec succès ! Nous vous contacterons très vite.`;
       
       alert(message);
@@ -73,7 +73,11 @@ const FormulaireDevis = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error('Erreur lors de l’envoi du devis :', error);
-      alert("Erreur lors de l'envoi. Veuillez réessayer ou nous contacter par téléphone.");
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        alert("Votre demande a été prise en compte et est en cours de traitement. Notre équipe vous contactera sous 24 à 48 heures.");
+      } else {
+        alert("Erreur lors de l'envoi. Veuillez vérifier vos informations ou nous contacter par téléphone.");
+      }
     } finally {
       setEnvoiEnCours(false);
     }

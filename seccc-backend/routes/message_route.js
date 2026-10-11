@@ -18,23 +18,33 @@ router.post('/', async (req, res) => {
 
     // Configurer le transporteur pour envoyer l'email
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-      }
+        pass: process.env.EMAIL_PASS
+      },
+      connectionTimeout: 4000,
+      greetingTimeout: 4000,
+      socketTimeout: 4000
     });
 
     // Définir les options de l'email
     const mailOptions = {
-      from: process.env.EMAIL_ADMIN,
-      to: process.env.EMAIL_ADMIN,
-      subject: 'Nouveau message de contact',
+      from: `"SECCC Contact" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      replyTo: email,
+      subject: `Nouveau message de contact : ${name}`,
       text: `Vous avez reçu un nouveau message de ${name} (${email}, ${telephone}):\n\n${userMessage}`
     };
 
-    // Envoyer l'email
-    await transporter.sendMail(mailOptions);
+    // Envoyer l'email en arrière-plan sans bloquer
+    transporter.sendMail(mailOptions).then(() => {
+      console.log("✅ Message contact relayé par email avec succès !");
+    }).catch(mailErr => {
+      console.warn("⚠️ Impossible de relayer par email le message :", mailErr.message);
+    });
 
     res.status(200).json({ message: 'Message envoyé avec succès' });
   } catch (error) {

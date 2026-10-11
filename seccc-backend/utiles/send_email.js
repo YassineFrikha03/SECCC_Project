@@ -1,5 +1,5 @@
+require('dotenv').config();
 const nodemailer = require('nodemailer');
-// Conseil: require('dotenv').config(); min a7sen ta3melha mara wa7da fi server.js wala index.js mte3k
 
 const envoyerEmailConfirmation = async (devis) => {
     try {
@@ -10,7 +10,10 @@ const envoyerEmailConfirmation = async (devis) => {
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
-            }
+            },
+            connectionTimeout: 4000,
+            greetingTimeout: 4000,
+            socketTimeout: 4000
         });
 
         const servicesDemandes = devis.servicesChoisis && devis.servicesChoisis.length > 0 
@@ -53,8 +56,8 @@ const envoyerEmailConfirmation = async (devis) => {
         // 2. Email à l'administrateur (Notification)
         const mailAdmin = {
             from: `"Site Web SECCC" <${process.env.EMAIL_USER}>`, 
-            to: process.env.EMAIL_USER, // S'envoie à lui-même
-            replyTo: devis.email, // L'admin peut répondre directement au client
+            to: process.env.EMAIL_USER, 
+            replyTo: devis.email,
             subject: `🚨 NOUVELLE DEMANDE DE DEVIS : ${devis.nom}`,
             html: `
             <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #e11d48; border-radius: 10px;">
@@ -84,15 +87,32 @@ const envoyerEmailConfirmation = async (devis) => {
             </div>`
         };
 
-        // Envoi des deux emails
-        await transporter.sendMail(mailClient);
-        await transporter.sendMail(mailAdmin);
-        
-        console.log("✅ Emails (Client + Admin) envoyés avec succès !");
+        // Envoi parallèle et indépendant des emails pour une vitesse maximale (< 3 secondes)
+        const resultats = await Promise.allSettled([
+            devis.email ? transporter.sendMail(mailClient) : Promise.reject(new Error("Email client manquant")),
+            transporter.sendMail(mailAdmin)
+        ]);
+
+        if (resultats[0].status === 'fulfilled') {
+            console.log("✅ Email de confirmation client envoyé avec succès !");
+        } else {
+            console.warn("⚠️ Email client non envoyé :", resultats[0].reason?.message || resultats[0].reason);
+        }
+
+        if (resultats[1].status === 'fulfilled') {
+            console.log("✅ Email d'alerte admin envoyé avec succès !");
+        } else {
+            console.warn("⚠️ Email admin non envoyé :", resultats[1].reason?.message || resultats[1].reason);
+        }
+
+        return {
+            clientEnvoye: resultats[0].status === 'fulfilled',
+            adminEnvoye: resultats[1].status === 'fulfilled'
+        };
         
     } catch (error) {
-        console.error("❌ Erreur lors de l'envoi des emails:", error);
-        throw error;
+        console.error("❌ Erreur lors de l'envoi des emails:", error.message);
+        return { clientEnvoye: false, adminEnvoye: false, error: error.message };
     }
 };
 

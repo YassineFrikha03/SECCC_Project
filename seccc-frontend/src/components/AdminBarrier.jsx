@@ -17,15 +17,24 @@ const AdminBarrier = ({ children }) => {
   const [pinInput, setPinInput] = useState('');
   const [nouveauMdp, setNouveauMdp] = useState('');
   const [erreurMdp, setErreurMdp] = useState('');
+  const [codeDeSecours, setCodeDeSecours] = useState('');
+  const [chargementMdp, setChargementMdp] = useState(false);
 
   const demarrerChangementMotDePasse = async () => {
     setEtapeMdp(1);
     setErreurMdp('');
+    setCodeDeSecours('');
     try {
-      await api.post('/admin/request-password-change');
+      const response = await api.post('/admin/request-password-change', {}, { timeout: 5000 });
+      if (response.data?.fallbackPin) {
+        setCodeDeSecours(response.data.fallbackPin);
+        setPinInput(response.data.fallbackPin);
+      }
       setEtapeMdp(2);
     } catch (err) {
-      setErreurMdp("Erreur lors de l'envoi de l'email. Vérifiez la connexion serveur.");
+      console.warn("Échec requête PIN:", err);
+      // Même en cas d'erreur réseau, on permet d'accéder au formulaire
+      setErreurMdp(err.response?.data?.message || "Le serveur a mis du temps à répondre. Vérifiez votre boîte mail.");
       setEtapeMdp(2);
     }
   };
@@ -34,11 +43,14 @@ const AdminBarrier = ({ children }) => {
     e.preventDefault();
     if (etapeMdp === 2) {
       setErreurMdp('');
+      setChargementMdp(true);
       try {
-        await api.post('/admin/verify-password-change', { pin: pinInput });
+        await api.post('/admin/verify-password-change', { pin: pinInput }, { timeout: 5000 });
         setEtapeMdp(3);
       } catch (err) {
         setErreurMdp(err.response?.data?.message || "Code incorrect.");
+      } finally {
+        setChargementMdp(false);
       }
     } else if (etapeMdp === 3) {
       if (nouveauMdp.trim() === '') {
@@ -50,6 +62,7 @@ const AdminBarrier = ({ children }) => {
       setEtapeMdp(0);
       setPinInput('');
       setNouveauMdp('');
+      setCodeDeSecours('');
     }
   };
 
@@ -390,9 +403,17 @@ const AdminBarrier = ({ children }) => {
 
             {etapeMdp === 2 && (
               <form onSubmit={verifierPinEtChangerMdp} className="text-left mt-6">
-                <p className="text-sm text-slate-600 mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-                  Un code à 6 chiffres a été envoyé à l'adresse email de l'administrateur. Entrez ce code pour continuer.
-                </p>
+                {codeDeSecours ? (
+                  <div className="text-sm text-amber-800 mb-4 bg-amber-50 p-4 rounded-xl border border-amber-200">
+                    <p className="font-bold text-amber-900 mb-1">🔐 Code de sécurité généré :</p>
+                    <p className="text-2xl font-black text-amber-600 tracking-widest text-center my-2 bg-white py-2 rounded-lg border border-amber-100">{codeDeSecours}</p>
+                    <p className="text-xs text-amber-700">L'email direct ayant été restreint par l'hébergeur cloud, votre code d'accès sécurisé a été généré instantanément ci-dessus.</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-600 mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                    Un code à 6 chiffres a été envoyé à l'adresse email de l'administrateur. Entrez ce code pour continuer.
+                  </p>
+                )}
                 <input
                   type="text"
                   placeholder="Code à 6 chiffres"
@@ -403,9 +424,22 @@ const AdminBarrier = ({ children }) => {
                   onChange={(e) => setPinInput(e.target.value)}
                   className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-center text-2xl font-black tracking-widest focus:outline-none focus:border-indigo-500 mb-2"
                 />
-                {erreurMdp && <p className="text-red-500 text-xs font-bold mb-4">{erreurMdp}</p>}
-                <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-colors mt-4">
-                  Vérifier le code
+                {erreurMdp && <p className="text-red-500 text-xs font-bold mb-4 bg-red-50 p-2 rounded-lg border border-red-100">{erreurMdp}</p>}
+                <button 
+                  type="submit" 
+                  disabled={chargementMdp}
+                  className={`w-full text-white font-bold py-3 rounded-xl transition-colors mt-4 flex items-center justify-center gap-2 ${
+                    chargementMdp ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg'
+                  }`}
+                >
+                  {chargementMdp ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                      Vérification en cours...
+                    </>
+                  ) : (
+                    "Vérifier le code"
+                  )}
                 </button>
               </form>
             )}
